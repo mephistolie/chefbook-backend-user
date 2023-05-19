@@ -1,0 +1,6 @@
+apiVersion: v2
+name: chefbook-backend-user-service
+description: ChefBook User Microservice Helm chart
+type: application
+version: 1.0.0
+appVersion: "1.0.0"

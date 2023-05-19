@@ -1,0 +1,20 @@
+syntax = "proto3";
+package v1;
+
+option go_package = "github.com/mephistolie/chefbook-backend-user/api/proto/v1";
+
+import "v1/get-user-info.proto";
+import "v1/set-user-name.proto";
+import "v1/set-user-description.proto";
+import "v1/generate-user-avatar-upload-link.proto";
+import "v1/confirm-user-avatar-uploading.proto";
+import "v1/delete-user-avatar.proto";
+
+service UserService {
+  rpc GetUserInfo(GetUserInfoRequest) returns (GetUserInfoResponse);
+  rpc SetUserName(SetUserNameRequest) returns (SetUserNameResponse);
+  rpc SetUserDescription(SetUserDescriptionRequest) returns (SetUserDescriptionResponse);
+  rpc GenerateUserAvatarUploadLink(GenerateUserAvatarUploadLinkRequest) returns (GenerateUserAvatarUploadLinkResponse);
+  rpc ConfirmUserAvatarUploading(ConfirmUserAvatarUploadingRequest) returns (ConfirmUserAvatarUploadingResponse);
+  rpc DeleteUserAvatar(DeleteUserAvatarRequest) returns (DeleteUserAvatarResponse);
+}

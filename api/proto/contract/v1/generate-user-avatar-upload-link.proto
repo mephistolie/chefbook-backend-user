@@ -1,0 +1,13 @@
+syntax = "proto3";
+package v1;
+
+option go_package = "github.com/mephistolie/chefbook-backend-user/api/proto/v1";
+
+message GenerateUserAvatarUploadLinkRequest {
+  string userId = 1;
+  int64 size = 2;
+}
+
+message GenerateUserAvatarUploadLinkResponse {
+  string link = 1;
+}

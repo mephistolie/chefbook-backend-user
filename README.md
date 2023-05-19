@@ -1,1 +1,1 @@
-# chefbook-backend-user
+# ChefBook Backend User Service
