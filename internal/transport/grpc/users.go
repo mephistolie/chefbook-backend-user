@@ -106,8 +106,12 @@ func (s *UserServer) ConfirmUserAvatarUploading(_ context.Context, req *api.Conf
 	if err != nil {
 		return nil, fail.GrpcInvalidBody
 	}
+	avatarId, err := uuid.Parse(req.AvatarId)
+	if err != nil {
+		return nil, fail.GrpcInvalidBody
+	}
 
-	if err = s.service.ConfirmUserAvatarUploading(userId); err != nil {
+	if err = s.service.ConfirmUserAvatarUploading(userId, avatarId); err != nil {
 		return nil, err
 	}
 
