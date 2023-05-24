@@ -7,5 +7,6 @@ type UserInfo struct {
 	FirstName   *string
 	LastName    *string
 	Description *string
-	AvatarUrl   *string
+	AvatarId    *uuid.UUID
+	AvatarLink  *string
 }

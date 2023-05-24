@@ -29,8 +29,8 @@ func (s *UserServer) GetUserInfo(_ context.Context, req *api.GetUserInfoRequest)
 	if info.Description != nil {
 		description = *info.Description
 	}
-	if info.AvatarUrl != nil {
-		avatar = *info.AvatarUrl
+	if info.AvatarId != nil {
+		avatar = *info.AvatarId
 	}
 
 	return &api.GetUserInfoResponse{

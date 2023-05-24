@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	usersTable = "users"
-	inboxTable = "inbox"
+	usersTable         = "users"
+	avatarUploadsTable = "avatar_uploads"
+	inboxTable         = "inbox"
 
 	errUniqueViolation = "23505"
 )

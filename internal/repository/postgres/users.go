@@ -12,13 +12,13 @@ func (r *Repository) GetUserInfo(userId uuid.UUID) (entity.UserInfo, error) {
 	info := entity.UserInfo{}
 
 	query := fmt.Sprintf(`
-			SELECT user_id, first_name, last_name, description, avatar
-			FROM %s
-			WHERE user_id=$1
-		`, usersTable)
+		SELECT user_id, first_name, last_name, description, avatar_id
+		FROM %s
+		WHERE user_id=$1
+	`, usersTable)
 
 	row := r.db.QueryRow(query, userId)
-	if err := row.Scan(&info.UserId, &info.FirstName, &info.LastName, &info.Description, &info.AvatarUrl); err != nil {
+	if err := row.Scan(&info.UserId, &info.FirstName, &info.LastName, &info.Description, &info.AvatarId); err != nil {
 		log.Warnf("unable to get user %s info: %s", userId, err)
 		return entity.UserInfo{}, fail.GrpcNotFound
 	}
@@ -28,10 +28,10 @@ func (r *Repository) GetUserInfo(userId uuid.UUID) (entity.UserInfo, error) {
 
 func (r *Repository) SetUserName(userId uuid.UUID, firstName, lastName *string) error {
 	query := fmt.Sprintf(`
-			UPDATE %s
-			SET first_name=$1, last_name=$2
-			WHERE user_id=$3
-		`, usersTable)
+		UPDATE %s
+		SET first_name=$1, last_name=$2
+		WHERE user_id=$3
+	`, usersTable)
 
 	if _, err := r.db.Exec(query, firstName, lastName, userId); err != nil {
 		log.Warnf("unable to set user %s name: %s", userId, err)
@@ -43,10 +43,10 @@ func (r *Repository) SetUserName(userId uuid.UUID, firstName, lastName *string) 
 
 func (r *Repository) SetUserDescription(userId uuid.UUID, description *string) error {
 	query := fmt.Sprintf(`
-			UPDATE %s
-			SET description=$1
-			WHERE user_id=$2
-		`, usersTable)
+		UPDATE %s
+		SET description=$1
+		WHERE user_id=$2
+	`, usersTable)
 
 	if _, err := r.db.Exec(query, description, userId); err != nil {
 		log.Warnf("unable to set user %s description: %s", userId, err)
@@ -56,17 +56,74 @@ func (r *Repository) SetUserDescription(userId uuid.UUID, description *string) e
 	return nil
 }
 
-func (r *Repository) SetUserAvatar(userId uuid.UUID, link *string) error {
-	query := fmt.Sprintf(`
-			UPDATE %s
-			SET avatar=$1
-			WHERE user_id=$2
-		`, usersTable)
+func (r *Repository) RegisterAvatarUploading(userId uuid.UUID) (uuid.UUID, error) {
+	var avatarId uuid.UUID
 
-	if _, err := r.db.Exec(query, link, userId); err != nil {
-		log.Warnf("unable to set user %s avatar link: %s", userId, err)
-		return fail.GrpcUnknown
+	query := fmt.Sprintf(`
+		WITH s AS
+		(
+			SELECT avatar_id
+			FROM %[1]v
+			WHERE user_id=$1
+		), i AS
+		(
+			INSERT INTO %[1]v (user_id)
+			SELECT $1
+			WHERE NOT EXISTS (SELECT 1 FROM s)
+			RETURNING avatar_id
+		)
+		SELECT avatar_id FROM i
+		UNION ALL
+		SELECT avatar_id FROM s
+	`, avatarUploadsTable)
+
+	if err := r.db.Get(&avatarId, query, userId); err != nil {
+		log.Errorf("unable to register avatar uploading for user %s: %s", userId, err)
+		return uuid.UUID{}, fail.GrpcUnknown
 	}
 
-	return nil
+	return avatarId, nil
+}
+
+func (r *Repository) SetUserAvatar(userId uuid.UUID, avatarId *uuid.UUID) (*uuid.UUID, error) {
+	tx, err := r.startTransaction()
+	if err != nil {
+		return nil, err
+	}
+
+	var previousAvatarId *uuid.UUID = nil
+
+	getPreviousAvatarIdQuery := fmt.Sprintf(`
+		SELECT avatar_id
+		FROM %s
+		WHERE user_id=$1
+	`, usersTable)
+
+	if err := tx.QueryRow(getPreviousAvatarIdQuery, avatarId, userId).Scan(&previousAvatarId); err != nil {
+		log.Warnf("unable to get user %s avatar id: %s", userId, err)
+		return nil, fail.GrpcUnknown
+	}
+
+	setAvatarQuery := fmt.Sprintf(`
+		UPDATE %s
+		SET avatar_id=$1
+		WHERE user_id=$2
+	`, usersTable)
+
+	if _, err := tx.Exec(setAvatarQuery, avatarId, userId); err != nil {
+		log.Warnf("unable to set user %s avatar id: %s", userId, err)
+		return nil, fail.GrpcUnknown
+	}
+
+	confirmUploadingQuery := fmt.Sprintf(`
+		DELETE FROM %s
+		WHERE avatar_id=$1 AND user_id=$2
+	`, avatarUploadsTable)
+
+	if _, err := tx.Exec(confirmUploadingQuery, avatarId, userId); err != nil {
+		log.Warnf("unable to delete avatar uploading record: %s", userId, err)
+		return nil, fail.GrpcUnknown
+	}
+
+	return previousAvatarId, nil
 }

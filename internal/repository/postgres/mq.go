@@ -20,9 +20,9 @@ func (r *Repository) CreateUser(userId uuid.UUID, messageId uuid.UUID) error {
 	}
 
 	query := fmt.Sprintf(`
-			INSERT INTO %s (user_id)
-			VALUES ($1)
-		`, usersTable)
+		INSERT INTO %s (user_id)
+		VALUES ($1)
+	`, usersTable)
 
 	if _, err = tx.Exec(query, userId); err != nil {
 		log.Errorf("unable to create user %s: %s", userId, err)
@@ -52,10 +52,10 @@ func (r *Repository) ImportFirebaseName(userId uuid.UUID, username *string, mess
 	}
 
 	query := fmt.Sprintf(`
-			UPDATE %s
-			SET first_name=$1, last_name=$2
-			WHERE user_id=$3
-		`, usersTable)
+		UPDATE %s
+		SET first_name=$1, last_name=$2
+		WHERE user_id=$3
+	`, usersTable)
 
 	if _, err = tx.Exec(query, firstName, secondName, userId); err != nil {
 		log.Errorf("unable to create user %s: %s", userId, err)
@@ -76,9 +76,9 @@ func (r *Repository) DeleteUser(userId uuid.UUID, messageId uuid.UUID) error {
 	}
 
 	query := fmt.Sprintf(`
-			DELETE FROM %s
-			WHERE user_id=$1
-		`, usersTable)
+		DELETE FROM %s
+		WHERE user_id=$1
+	`, usersTable)
 
 	if _, err := tx.Exec(query, userId); err != nil {
 		log.Errorf("unable to delete user %s: %s", userId, err)
@@ -95,9 +95,9 @@ func (r *Repository) handleMessageIdempotently(messageId uuid.UUID) (*sql.Tx, er
 	}
 
 	addMessageQuery := fmt.Sprintf(`
-			INSERT INTO %s (message_id)
-			VALUES ($1)
-		`, inboxTable)
+		INSERT INTO %s (message_id)
+		VALUES ($1)
+	`, inboxTable)
 
 	if _, err = tx.Exec(addMessageQuery, messageId); err != nil {
 		if !isUniqueViolationError(err) {
@@ -107,15 +107,15 @@ func (r *Repository) handleMessageIdempotently(messageId uuid.UUID) (*sql.Tx, er
 	}
 
 	deleteOutdatedMessagesQuery := fmt.Sprintf(`
-			DELETE FROM %[1]v
-			WHERE ctid IN
-			(
-				SELECT ctid IN
-				FROM %[1]v
-				ORDER BY timestamp DESC
-				OFFSET 1000
-			)
-		`, inboxTable)
+		DELETE FROM %[1]v
+		WHERE ctid IN
+		(
+			SELECT ctid IN
+			FROM %[1]v
+			ORDER BY timestamp DESC
+			OFFSET 1000
+		)
+	`, inboxTable)
 
 	if _, err = tx.Exec(deleteOutdatedMessagesQuery); err != nil {
 		return nil, errorWithTransactionRollback(tx, err)

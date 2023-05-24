@@ -22,7 +22,7 @@ type User interface {
 	SetUserName(userId uuid.UUID, firstName, lastName *string) error
 	SetUserDescription(userId uuid.UUID, description *string) error
 	GenerateUserAvatarUploadLink(userId uuid.UUID) (string, error)
-	ConfirmUserAvatarUploading(userId uuid.UUID) error
+	ConfirmUserAvatarUploading(userId uuid.UUID, avatarId uuid.UUID) error
 	DeleteUserAvatar(userId uuid.UUID) error
 }
 

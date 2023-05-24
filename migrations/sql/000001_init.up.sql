@@ -4,7 +4,13 @@ CREATE TABLE users
     first_name  VARCHAR(64)                      DEFAULT NULL,
     last_name   VARCHAR(64)                      DEFAULT NULL,
     description VARCHAR(150)                     DEFAULT NULL,
-    avatar      TEXT                             DEFAULT NULL
+    avatar_id      uuid                             DEFAULT NULL
+);
+
+CREATE TABLE avatar_uploads
+(
+    avatar_id  uuid PRIMARY KEY                                  NOT NULL UNIQUE DEFAULT gen_random_uuid(),
+    expires_at TIMESTAMP WITH TIME ZONE                          NOT NULL
 );
 
 CREATE TABLE inbox

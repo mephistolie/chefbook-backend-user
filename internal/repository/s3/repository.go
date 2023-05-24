@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	usersDir     = "users"
-	avatarObject = "avatar"
+	usersDir   = "users"
+	avatarsDir = "avatars"
 
 	avatarMaxSize = 1024 * 512 // 512KB
 )
@@ -39,21 +39,17 @@ func NewRepository(cfg config.S3) (*Repository, error) {
 	}, nil
 }
 
-func (r *Repository) GetUserAvatarLink(userId uuid.UUID) *string {
-	object := r.getUserAvatarObjectPath(userId)
-	if _, err := r.client.GetObjectACL(context.Background(), r.bucket, object); err != nil {
-		return nil
-	}
-	link := fmt.Sprintf("%s/%s", r.bucket, object)
-	return &link
+func (r *Repository) GetUserAvatarLink(userId, avatarId uuid.UUID) string {
+	objectPath := r.getUserAvatarObjectPath(userId, avatarId)
+	return fmt.Sprintf("https://%s/%s", r.bucket, objectPath)
 }
 
-func (r *Repository) GenerateUserAvatarUploadLink(userId uuid.UUID) (string, error) {
-	return r.generateImageUploadLink(r.getUserAvatarObjectPath(userId))
+func (r *Repository) GenerateUserAvatarUploadLink(userId, avatarId uuid.UUID) (string, error) {
+	return r.generateImageUploadLink(r.getUserAvatarObjectPath(userId, avatarId))
 }
 
-func (r *Repository) DeleteAvatar(userId uuid.UUID) error {
-	object := r.getUserAvatarObjectPath(userId)
+func (r *Repository) DeleteAvatar(userId, avatarId uuid.UUID) error {
+	object := r.getUserAvatarObjectPath(userId, avatarId)
 	opts := minio.RemoveObjectOptions{ForceDelete: true}
 	if err := r.client.RemoveObject(context.Background(), object, r.bucket, opts); err != nil {
 		log.Warnf("unable to delete user %s avatar: %s", userId, err)
@@ -62,8 +58,8 @@ func (r *Repository) DeleteAvatar(userId uuid.UUID) error {
 	return nil
 }
 
-func (r *Repository) getUserAvatarObjectPath(userId uuid.UUID) string {
-	return fmt.Sprintf("%s/%s/%s", usersDir, userId, avatarObject)
+func (r *Repository) getUserAvatarObjectPath(userId, avatarId uuid.UUID) string {
+	return fmt.Sprintf("%s/%s/%s/%s", usersDir, userId, avatarsDir, avatarId)
 }
 
 func (r *Repository) generateImageUploadLink(objectName string) (string, error) {
