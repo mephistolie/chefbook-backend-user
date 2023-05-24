@@ -9,4 +9,5 @@ message GenerateUserAvatarUploadLinkRequest {
 
 message GenerateUserAvatarUploadLinkResponse {
   string link = 1;
+  string avatarId = 2;
 }

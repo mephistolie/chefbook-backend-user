@@ -25,12 +25,18 @@ func (s *Service) SetUserDescription(userId uuid.UUID, description *string) erro
 	return s.repo.SetUserDescription(userId, description)
 }
 
-func (s *Service) GenerateUserAvatarUploadLink(userId uuid.UUID) (string, error) {
+func (s *Service) GenerateUserAvatarUploadLink(userId uuid.UUID) (uuid.UUID, string, error) {
 	avatarId, err := s.repo.RegisterAvatarUploading(userId)
 	if err != nil {
-		return "", err
+		return uuid.UUID{}, "", err
 	}
-	return s.s3.GenerateUserAvatarUploadLink(userId, avatarId)
+
+	link, err := s.s3.GenerateUserAvatarUploadLink(userId, avatarId)
+	if err != nil {
+		return uuid.UUID{}, "", err
+	}
+
+	return avatarId, link, nil
 }
 
 func (s *Service) ConfirmUserAvatarUploading(userId uuid.UUID, avatarId uuid.UUID) error {

@@ -29,8 +29,8 @@ func (s *UserServer) GetUserInfo(_ context.Context, req *api.GetUserInfoRequest)
 	if info.Description != nil {
 		description = *info.Description
 	}
-	if info.AvatarId != nil {
-		avatar = *info.AvatarId
+	if info.AvatarLink != nil {
+		avatar = *info.AvatarLink
 	}
 
 	return &api.GetUserInfoResponse{
@@ -93,12 +93,12 @@ func (s *UserServer) GenerateUserAvatarUploadLink(_ context.Context, req *api.Ge
 		return nil, fail.GrpcInvalidBody
 	}
 
-	link, err := s.service.GenerateUserAvatarUploadLink(userId)
+	avatarId, link, err := s.service.GenerateUserAvatarUploadLink(userId)
 	if err != nil {
 		return nil, err
 	}
 
-	return &api.GenerateUserAvatarUploadLinkResponse{Link: link}, nil
+	return &api.GenerateUserAvatarUploadLinkResponse{AvatarId: avatarId.String(), Link: link}, nil
 }
 
 func (s *UserServer) ConfirmUserAvatarUploading(_ context.Context, req *api.ConfirmUserAvatarUploadingRequest) (*api.ConfirmUserAvatarUploadingResponse, error) {
