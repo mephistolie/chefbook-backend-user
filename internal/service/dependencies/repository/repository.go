@@ -19,6 +19,6 @@ type User interface {
 
 type S3 interface {
 	GetUserAvatarLink(userId, avatarId uuid.UUID) string
-	GenerateUserAvatarUploadLink(userId, avatarId uuid.UUID) (string, error)
+	GenerateUserAvatarUploadLink(userId, avatarId uuid.UUID) (string, map[string]string, error)
 	DeleteAvatar(userId, avatarId uuid.UUID) error
 }

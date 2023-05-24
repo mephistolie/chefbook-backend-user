@@ -93,12 +93,16 @@ func (s *UserServer) GenerateUserAvatarUploadLink(_ context.Context, req *api.Ge
 		return nil, fail.GrpcInvalidBody
 	}
 
-	avatarId, link, err := s.service.GenerateUserAvatarUploadLink(userId)
+	avatarId, link, formData, err := s.service.GenerateUserAvatarUploadLink(userId)
 	if err != nil {
 		return nil, err
 	}
 
-	return &api.GenerateUserAvatarUploadLinkResponse{AvatarId: avatarId.String(), Link: link}, nil
+	return &api.GenerateUserAvatarUploadLinkResponse{
+		AvatarId: avatarId.String(),
+		Link:     link,
+		FormData: formData,
+	}, nil
 }
 
 func (s *UserServer) ConfirmUserAvatarUploading(_ context.Context, req *api.ConfirmUserAvatarUploadingRequest) (*api.ConfirmUserAvatarUploadingResponse, error) {
