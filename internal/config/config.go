@@ -37,6 +37,7 @@ type S3 struct {
 	AccessKeyId     *string
 	SecretAccessKey *string
 	Bucket          *string
+	Region          *string
 }
 
 type Amqp struct {
@@ -63,13 +64,14 @@ func (c Config) Print() {
 		"Database port: %v\n"+
 		"Database name: %v\n\n"+
 		"S3 host: %v\n"+
-		"S3 bucket: %v\n\n"+
+		"S3 bucket: %v\n"+
+		"S3 region: %v\n\n"+
 		"MQ host: %v\n"+
 		"MQ port: %v\n"+
 		"MQ vhost: %v\n\n",
 		*c.Environment, *c.Port, *c.LogsPath,
 		*c.Database.Host, *c.Database.Port, *c.Database.DBName,
-		*c.S3.Host, *c.S3.Bucket,
+		*c.S3.Host, *c.S3.Bucket, *c.S3.Region,
 		*c.Amqp.Host, *c.Amqp.Port, *c.Amqp.VHost,
 	)
 }

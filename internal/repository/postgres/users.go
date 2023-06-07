@@ -86,11 +86,6 @@ func (r *Repository) RegisterAvatarUploading(userId uuid.UUID) (uuid.UUID, error
 }
 
 func (r *Repository) SetUserAvatar(userId uuid.UUID, avatarId *uuid.UUID) (*uuid.UUID, error) {
-	tx, err := r.startTransaction()
-	if err != nil {
-		return nil, err
-	}
-
 	var previousAvatarId *uuid.UUID = nil
 
 	getPreviousAvatarIdQuery := fmt.Sprintf(`
@@ -99,9 +94,18 @@ func (r *Repository) SetUserAvatar(userId uuid.UUID, avatarId *uuid.UUID) (*uuid
 		WHERE user_id=$1
 	`, usersTable)
 
-	if err := tx.QueryRow(getPreviousAvatarIdQuery, avatarId, userId).Scan(&previousAvatarId); err != nil {
+	if err := r.db.QueryRow(getPreviousAvatarIdQuery, userId).Scan(&previousAvatarId); err != nil {
 		log.Warnf("unable to get user %s avatar id: %s", userId, err)
 		return nil, fail.GrpcUnknown
+	}
+
+	if (avatarId != nil && previousAvatarId != nil && *avatarId == *previousAvatarId) || avatarId == previousAvatarId {
+		return nil, nil
+	}
+
+	tx, err := r.startTransaction()
+	if err != nil {
+		return nil, err
 	}
 
 	setAvatarQuery := fmt.Sprintf(`
@@ -115,15 +119,17 @@ func (r *Repository) SetUserAvatar(userId uuid.UUID, avatarId *uuid.UUID) (*uuid
 		return nil, fail.GrpcUnknown
 	}
 
-	confirmUploadingQuery := fmt.Sprintf(`
+	if avatarId != nil {
+		deleteUploadingQuery := fmt.Sprintf(`
 		DELETE FROM %s
 		WHERE avatar_id=$1 AND user_id=$2
 	`, avatarUploadsTable)
 
-	if _, err := tx.Exec(confirmUploadingQuery, avatarId, userId); err != nil {
-		log.Warnf("unable to delete avatar uploading record: %s", userId, err)
-		return nil, fail.GrpcUnknown
+		if _, err := tx.Exec(deleteUploadingQuery, *avatarId, userId); err != nil {
+			log.Warnf("unable to delete avatar uploading record: %s", userId, err)
+			return nil, fail.GrpcUnknown
+		}
 	}
 
-	return previousAvatarId, nil
+	return previousAvatarId, commitTransaction(tx)
 }

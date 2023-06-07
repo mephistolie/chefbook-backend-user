@@ -28,6 +28,7 @@ func NewRepository(cfg config.S3) (*Repository, error) {
 	client, err := minio.New(*cfg.Host, &minio.Options{
 		Creds:  credentials.NewStaticV4(*cfg.AccessKeyId, *cfg.SecretAccessKey, ""),
 		Secure: true,
+		Region: *cfg.Region,
 	})
 	if err != nil {
 		return nil, err
@@ -48,10 +49,15 @@ func (r *Repository) GenerateUserAvatarUploadLink(userId, avatarId uuid.UUID) (s
 	return r.generateImageUploadLink(r.getUserAvatarObjectPath(userId, avatarId))
 }
 
+func (r *Repository) CheckAvatarExists(userId, avatarId uuid.UUID) bool {
+	_, err := r.client.GetObjectACL(context.Background(), r.bucket, r.getUserAvatarObjectPath(userId, avatarId))
+	return err == nil
+}
+
 func (r *Repository) DeleteAvatar(userId, avatarId uuid.UUID) error {
 	object := r.getUserAvatarObjectPath(userId, avatarId)
 	opts := minio.RemoveObjectOptions{ForceDelete: true}
-	if err := r.client.RemoveObject(context.Background(), object, r.bucket, opts); err != nil {
+	if err := r.client.RemoveObject(context.Background(), r.bucket, object, opts); err != nil {
 		log.Warnf("unable to delete user %s avatar: %s", userId, err)
 		return fail.GrpcUnknown
 	}
@@ -73,16 +79,25 @@ func (r *Repository) generateImageUploadLink(objectName string) (string, map[str
 		log.Errorf("unable to set object %s in post policy: %s", objectName, err)
 		return "", map[string]string{}, fail.GrpcUnknown
 	}
+	if err := policy.SetContentTypeStartsWith("image"); err != nil {
+		log.Errorf("unable to set content type in post policy: %s", objectName, err)
+		return "", map[string]string{}, fail.GrpcUnknown
+	}
+	if err := policy.SetContentLengthRange(0, avatarMaxSize); err != nil {
+		log.Errorf("unable to set content length in post policy: %s", objectName, err)
+		return "", map[string]string{}, fail.GrpcUnknown
+	}
 	if err := policy.SetExpires(time.Now().Add(1 * time.Hour)); err != nil {
 		log.Errorf("unable to set expiration in post policy: %s", objectName, err)
 		return "", map[string]string{}, fail.GrpcUnknown
 	}
 
-	presignedUrl, formData, err := r.client.PresignedPostPolicy(context.Background(), policy)
+	_, formData, err := r.client.PresignedPostPolicy(context.Background(), policy)
 	if err != nil {
 		log.Errorf("unable to generate presigned link for uploading object %s: %s", objectName, err)
 		return "", map[string]string{}, fail.GrpcUnknown
 	}
+	url := fmt.Sprintf("https://%s", r.bucket)
 
-	return presignedUrl.String(), formData, nil
+	return url, formData, nil
 }

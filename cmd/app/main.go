@@ -32,6 +32,7 @@ func main() {
 			AccessKeyId:     fs.String("s3-access-key-id", "", "S3 access key ID"),
 			SecretAccessKey: fs.String("s3-secret-access-key", "", "S3 access key ID"),
 			Bucket:          fs.String("s3-bucket", "images", "S3 bucket"),
+			Region:          fs.String("s3-region", "us-east-1", "S3 region"),
 		},
 
 		Amqp: config.Amqp{

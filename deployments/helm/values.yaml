@@ -6,7 +6,7 @@ image:
   registry: ""
   pullPolicy: IfNotPresent
   tag: ""
-imagePullSecrets: []
+imagePullSecrets: [ ]
 
 config:
   develop: false
@@ -20,7 +20,9 @@ config:
 
   s3:
     host: ""
+    accessKeyId: ""
     bucket: images
+    region: "us-east-1"
 
   rabbitmq:
     name: ""
@@ -58,23 +60,23 @@ autoscaling:
   # targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
 
-podAnnotations: {}
+podAnnotations: { }
 
-podSecurityContext: {}
-  # fsGroup: 2000
+podSecurityContext: { }
+# fsGroup: 2000
 
-securityContext: {}
+securityContext: { }
   # capabilities:
   #   drop:
   #   - ALL
   # readOnlyRootFilesystem: true
   # runAsNonRoot: true
-  # runAsUser: 1000
+# runAsUser: 1000
 
-resources: {}
+resources: { }
 
-nodeSelector: {}
+nodeSelector: { }
 
-tolerations: []
+tolerations: [ ]
 
-affinity: {}
+affinity: { }

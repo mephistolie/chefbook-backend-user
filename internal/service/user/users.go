@@ -2,6 +2,7 @@ package user
 
 import (
 	"github.com/google/uuid"
+	"github.com/mephistolie/chefbook-backend-common/responses/fail"
 	"github.com/mephistolie/chefbook-backend-user/internal/entity"
 )
 
@@ -40,6 +41,9 @@ func (s *Service) GenerateUserAvatarUploadLink(userId uuid.UUID) (uuid.UUID, str
 }
 
 func (s *Service) ConfirmUserAvatarUploading(userId uuid.UUID, avatarId uuid.UUID) error {
+	if !s.s3.CheckAvatarExists(userId, avatarId) {
+		return fail.GrpcNotFound
+	}
 	return s.setUserAvatar(userId, &avatarId)
 }
 
