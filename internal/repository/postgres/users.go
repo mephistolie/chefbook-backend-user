@@ -8,6 +8,57 @@ import (
 	"github.com/mephistolie/chefbook-backend-user/internal/entity"
 )
 
+func (r *Repository) GetUsersMinimalInfos(userIds []uuid.UUID) map[uuid.UUID]entity.UserMinimalInfo {
+	var infos map[uuid.UUID]entity.UserMinimalInfo
+
+	query := fmt.Sprintf(`
+		SELECT user_id, first_name, last_name, avatar_id
+		FROM %s
+		WHERE user_id=ANY($1)
+	`, usersTable)
+
+	rows, err := r.db.Query(query, userIds)
+	if err != nil {
+		log.Error("unable to get minimal info for users: ", err)
+		return map[uuid.UUID]entity.UserMinimalInfo{}
+	}
+
+	for rows.Next() {
+		var info entity.UserMinimalInfo
+		var firstName *string
+		var lastName *string
+
+		if err = rows.Scan(&info.UserId, &firstName, &lastName, &info.AvatarId); err != nil {
+			log.Error("unable to parse minimal info for user: ", err)
+			continue
+		}
+
+		info.FullName = r.getFullName(firstName, lastName)
+
+		infos[info.UserId] = info
+	}
+
+	return infos
+}
+
+func (r *Repository) getFullName(firstName, lastName *string) *string {
+	fullName := ""
+	if firstName != nil {
+		fullName += *firstName
+	}
+	if lastName != nil {
+		if firstName != nil {
+			fullName += " "
+		}
+		fullName += *lastName
+	}
+
+	if len(fullName) > 0 {
+		return &fullName
+	}
+	return nil
+}
+
 func (r *Repository) GetUserInfo(userId uuid.UUID) (entity.UserInfo, error) {
 	info := entity.UserInfo{}
 

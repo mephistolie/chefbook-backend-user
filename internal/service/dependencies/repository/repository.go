@@ -10,6 +10,7 @@ type User interface {
 	ImportFirebaseName(userId uuid.UUID, username *string, messageId uuid.UUID) error
 	DeleteUser(userId uuid.UUID, messageId uuid.UUID) error
 
+	GetUsersMinimalInfos(userIds []uuid.UUID) map[uuid.UUID]entity.UserMinimalInfo
 	GetUserInfo(userId uuid.UUID) (entity.UserInfo, error)
 	SetUserName(userId uuid.UUID, firstName, lastName *string) error
 	SetUserDescription(userId uuid.UUID, description *string) error

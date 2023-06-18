@@ -8,6 +8,32 @@ import (
 	userFail "github.com/mephistolie/chefbook-backend-user/internal/entity/fail"
 )
 
+func (s *UserServer) GetUsersMinInfo(_ context.Context, req *api.GetUsersMinInfoRequest) (*api.GetUsersMinInfoResponse, error) {
+	var userIds []uuid.UUID
+	for _, rawId := range req.UserIds {
+		if userId, err := uuid.Parse(rawId); err == nil {
+			userIds = append(userIds, userId)
+		}
+	}
+
+	response := s.service.User.GetUsersMinimalInfos(userIds)
+
+	infos := make(map[string]*api.UserMinInfo)
+	for id, info := range response {
+		dto := api.UserMinInfo{}
+		if info.FullName != nil {
+			dto.FullName = *info.FullName
+		}
+		if info.AvatarLink != nil {
+			dto.Avatar = *info.AvatarLink
+		}
+
+		infos[id.String()] = &dto
+	}
+
+	return &api.GetUsersMinInfoResponse{Infos: infos}, nil
+}
+
 func (s *UserServer) GetUserInfo(_ context.Context, req *api.GetUserInfoRequest) (*api.GetUserInfoResponse, error) {
 	userId, err := uuid.Parse(req.UserId)
 	if err != nil {

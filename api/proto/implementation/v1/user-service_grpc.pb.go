@@ -19,6 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
+	UserService_GetUsersMinInfo_FullMethodName              = "/v1.UserService/GetUsersMinInfo"
 	UserService_GetUserInfo_FullMethodName                  = "/v1.UserService/GetUserInfo"
 	UserService_SetUserName_FullMethodName                  = "/v1.UserService/SetUserName"
 	UserService_SetUserDescription_FullMethodName           = "/v1.UserService/SetUserDescription"
@@ -31,6 +32,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type UserServiceClient interface {
+	GetUsersMinInfo(ctx context.Context, in *GetUsersMinInfoRequest, opts ...grpc.CallOption) (*GetUsersMinInfoResponse, error)
 	GetUserInfo(ctx context.Context, in *GetUserInfoRequest, opts ...grpc.CallOption) (*GetUserInfoResponse, error)
 	SetUserName(ctx context.Context, in *SetUserNameRequest, opts ...grpc.CallOption) (*SetUserNameResponse, error)
 	SetUserDescription(ctx context.Context, in *SetUserDescriptionRequest, opts ...grpc.CallOption) (*SetUserDescriptionResponse, error)
@@ -45,6 +47,15 @@ type userServiceClient struct {
 
 func NewUserServiceClient(cc grpc.ClientConnInterface) UserServiceClient {
 	return &userServiceClient{cc}
+}
+
+func (c *userServiceClient) GetUsersMinInfo(ctx context.Context, in *GetUsersMinInfoRequest, opts ...grpc.CallOption) (*GetUsersMinInfoResponse, error) {
+	out := new(GetUsersMinInfoResponse)
+	err := c.cc.Invoke(ctx, UserService_GetUsersMinInfo_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *userServiceClient) GetUserInfo(ctx context.Context, in *GetUserInfoRequest, opts ...grpc.CallOption) (*GetUserInfoResponse, error) {
@@ -105,6 +116,7 @@ func (c *userServiceClient) DeleteUserAvatar(ctx context.Context, in *DeleteUser
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility
 type UserServiceServer interface {
+	GetUsersMinInfo(context.Context, *GetUsersMinInfoRequest) (*GetUsersMinInfoResponse, error)
 	GetUserInfo(context.Context, *GetUserInfoRequest) (*GetUserInfoResponse, error)
 	SetUserName(context.Context, *SetUserNameRequest) (*SetUserNameResponse, error)
 	SetUserDescription(context.Context, *SetUserDescriptionRequest) (*SetUserDescriptionResponse, error)
@@ -118,6 +130,9 @@ type UserServiceServer interface {
 type UnimplementedUserServiceServer struct {
 }
 
+func (UnimplementedUserServiceServer) GetUsersMinInfo(context.Context, *GetUsersMinInfoRequest) (*GetUsersMinInfoResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUsersMinInfo not implemented")
+}
 func (UnimplementedUserServiceServer) GetUserInfo(context.Context, *GetUserInfoRequest) (*GetUserInfoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUserInfo not implemented")
 }
@@ -147,6 +162,24 @@ type UnsafeUserServiceServer interface {
 
 func RegisterUserServiceServer(s grpc.ServiceRegistrar, srv UserServiceServer) {
 	s.RegisterService(&UserService_ServiceDesc, srv)
+}
+
+func _UserService_GetUsersMinInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUsersMinInfoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).GetUsersMinInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_GetUsersMinInfo_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).GetUsersMinInfo(ctx, req.(*GetUsersMinInfoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _UserService_GetUserInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -264,6 +297,10 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "v1.UserService",
 	HandlerType: (*UserServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetUsersMinInfo",
+			Handler:    _UserService_GetUsersMinInfo_Handler,
+		},
 		{
 			MethodName: "GetUserInfo",
 			Handler:    _UserService_GetUserInfo_Handler,

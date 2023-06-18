@@ -18,6 +18,7 @@ type Service struct {
 }
 
 type User interface {
+	GetUsersMinimalInfos(userIds []uuid.UUID) map[uuid.UUID]entity.UserMinimalInfo
 	GetUserInfo(userId uuid.UUID) (entity.UserInfo, error)
 	SetUserName(userId uuid.UUID, firstName, lastName *string) error
 	SetUserDescription(userId uuid.UUID, description *string) error

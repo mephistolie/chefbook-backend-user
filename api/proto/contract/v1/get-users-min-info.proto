@@ -1,0 +1,17 @@
+syntax = "proto3";
+package v1;
+
+option go_package = "github.com/mephistolie/chefbook-backend-user/api/proto/v1";
+
+message UserMinInfo {
+  string fullName = 1;
+  string avatar = 2;
+}
+
+message GetUsersMinInfoRequest {
+  repeated string userIds = 1;
+}
+
+message GetUsersMinInfoResponse {
+  map<string, UserMinInfo> infos = 1;
+}
