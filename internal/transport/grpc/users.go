@@ -5,7 +5,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/mephistolie/chefbook-backend-common/responses/fail"
 	api "github.com/mephistolie/chefbook-backend-user/api/proto/implementation/v1"
-	userFail "github.com/mephistolie/chefbook-backend-user/internal/entity/fail"
+)
+
+const (
+	maxNameLength        = 64
+	maxDescriptionLength = 150
 )
 
 func (s *UserServer) GetUsersMinInfo(_ context.Context, req *api.GetUsersMinInfoRequest) (*api.GetUsersMinInfoResponse, error) {
@@ -20,15 +24,10 @@ func (s *UserServer) GetUsersMinInfo(_ context.Context, req *api.GetUsersMinInfo
 
 	infos := make(map[string]*api.UserMinInfo)
 	for id, info := range response {
-		dto := api.UserMinInfo{}
-		if info.FullName != nil {
-			dto.FullName = *info.FullName
+		infos[id.String()] = &api.UserMinInfo{
+			FullName: info.FullName,
+			Avatar:   info.AvatarLink,
 		}
-		if info.AvatarLink != nil {
-			dto.Avatar = *info.AvatarLink
-		}
-
-		infos[id.String()] = &dto
 	}
 
 	return &api.GetUsersMinInfoResponse{Infos: infos}, nil
@@ -45,26 +44,12 @@ func (s *UserServer) GetUserInfo(_ context.Context, req *api.GetUserInfoRequest)
 		return nil, err
 	}
 
-	firstName, lastName, description, avatar := "", "", "", ""
-	if info.FirstName != nil {
-		firstName = *info.FirstName
-	}
-	if info.LastName != nil {
-		lastName = *info.LastName
-	}
-	if info.Description != nil {
-		description = *info.Description
-	}
-	if info.AvatarLink != nil {
-		avatar = *info.AvatarLink
-	}
-
 	return &api.GetUserInfoResponse{
 		UserId:      info.UserId.String(),
-		FirstName:   firstName,
-		LastName:    lastName,
-		Description: description,
-		Avatar:      avatar,
+		FirstName:   info.FirstName,
+		LastName:    info.LastName,
+		Description: info.Description,
+		Avatar:      info.AvatarLink,
 	}, nil
 }
 
@@ -73,18 +58,16 @@ func (s *UserServer) SetUserName(_ context.Context, req *api.SetUserNameRequest)
 	if err != nil {
 		return nil, fail.GrpcInvalidBody
 	}
-	if len(req.FirstName) > 64 || len(req.LastName) > 64 {
-		return nil, userFail.GrpcNameLength
+	if req.FirstName != nil && len(*req.FirstName) > maxNameLength {
+		firstName := (*req.FirstName)[0:maxNameLength]
+		req.FirstName = &firstName
 	}
-	var firstName, lastName *string = nil, nil
-	if len(req.FirstName) > 0 {
-		firstName = &req.FirstName
-	}
-	if len(req.LastName) > 0 {
-		lastName = &req.LastName
+	if req.LastName != nil && len(*req.LastName) > maxNameLength {
+		lastName := (*req.LastName)[0:maxNameLength]
+		req.LastName = &lastName
 	}
 
-	err = s.service.SetUserName(userId, firstName, lastName)
+	err = s.service.SetUserName(userId, req.FirstName, req.LastName)
 	if err != nil {
 		return nil, err
 	}
@@ -97,15 +80,12 @@ func (s *UserServer) SetUserDescription(_ context.Context, req *api.SetUserDescr
 	if err != nil {
 		return nil, fail.GrpcInvalidBody
 	}
-	var description *string = nil
-	if len(req.Description) > 0 {
-		if len(req.Description) > 150 {
-			return nil, userFail.GrpcDescriptionLength
-		}
-		description = &req.Description
+	if req.Description != nil && len(*req.Description) > 0 {
+		description := (*req.Description)[0:maxDescriptionLength]
+		req.Description = &description
 	}
 
-	err = s.service.SetUserDescription(userId, description)
+	err = s.service.SetUserDescription(userId, req.Description)
 	if err != nil {
 		return nil, err
 	}

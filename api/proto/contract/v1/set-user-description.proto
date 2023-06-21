@@ -5,7 +5,7 @@ option go_package = "github.com/mephistolie/chefbook-backend-user/api/proto/v1";
 
 message SetUserDescriptionRequest {
   string userId = 1;
-  string description = 2;
+  optional string description = 2;
 }
 
 message SetUserDescriptionResponse {

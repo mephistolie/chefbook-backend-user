@@ -8,10 +8,11 @@ import (
 
 func (s *Service) GetUsersMinimalInfos(userIds []uuid.UUID) map[uuid.UUID]entity.UserMinimalInfo {
 	infos := s.repo.GetUsersMinimalInfos(userIds)
-	for _, info := range infos {
+	for id, info := range infos {
 		if info.AvatarId != nil {
 			link := s.s3.GetUserAvatarLink(info.UserId, *info.AvatarId)
 			info.AvatarLink = &link
+			infos[id] = info
 		}
 	}
 	return infos

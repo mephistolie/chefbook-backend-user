@@ -9,7 +9,7 @@ import (
 )
 
 func (r *Repository) GetUsersMinimalInfos(userIds []uuid.UUID) map[uuid.UUID]entity.UserMinimalInfo {
-	var infos map[uuid.UUID]entity.UserMinimalInfo
+	infos := make(map[uuid.UUID]entity.UserMinimalInfo)
 
 	query := fmt.Sprintf(`
 		SELECT user_id, first_name, last_name, avatar_id
