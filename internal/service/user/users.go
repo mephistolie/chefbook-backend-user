@@ -38,25 +38,30 @@ func (s *Service) SetUserDescription(userId uuid.UUID, description *string) erro
 	return s.repo.SetUserDescription(userId, description)
 }
 
-func (s *Service) GenerateUserAvatarUploadLink(userId uuid.UUID) (uuid.UUID, string, map[string]string, error) {
+func (s *Service) GenerateUserAvatarUploadLink(userId uuid.UUID) (entity.PictureUpload, error) {
 	avatarId, err := s.repo.RegisterAvatarUploading(userId)
 	if err != nil {
-		return uuid.UUID{}, "", map[string]string{}, err
+		return entity.PictureUpload{}, err
 	}
 
-	link, formData, err := s.s3.GenerateUserAvatarUploadLink(userId, avatarId)
+	uploading, err := s.s3.GenerateUserAvatarUploadLink(userId, avatarId)
 	if err != nil {
-		return uuid.UUID{}, "", map[string]string{}, err
+		return entity.PictureUpload{}, err
 	}
 
-	return avatarId, link, formData, nil
+	return uploading, nil
 }
 
-func (s *Service) ConfirmUserAvatarUploading(userId uuid.UUID, avatarId uuid.UUID) error {
-	if !s.s3.CheckAvatarExists(userId, avatarId) {
+func (s *Service) ConfirmUserAvatarUploading(userId uuid.UUID, avatarLink string) error {
+	avatarId := s.s3.GetAvatarIdByLink(userId, avatarLink)
+	if avatarId == nil {
+		return fail.GrpcInvalidBody
+	}
+
+	if !s.s3.CheckAvatarExists(userId, *avatarId) {
 		return fail.GrpcNotFound
 	}
-	return s.setUserAvatar(userId, &avatarId)
+	return s.setUserAvatar(userId, avatarId)
 }
 
 func (s *Service) DeleteUserAvatar(userId uuid.UUID) error {

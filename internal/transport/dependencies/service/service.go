@@ -22,8 +22,8 @@ type User interface {
 	GetUserInfo(userId uuid.UUID) (entity.UserInfo, error)
 	SetUserName(userId uuid.UUID, firstName, lastName *string) error
 	SetUserDescription(userId uuid.UUID, description *string) error
-	GenerateUserAvatarUploadLink(userId uuid.UUID) (uuid.UUID, string, map[string]string, error)
-	ConfirmUserAvatarUploading(userId uuid.UUID, avatarId uuid.UUID) error
+	GenerateUserAvatarUploadLink(userId uuid.UUID) (entity.PictureUpload, error)
+	ConfirmUserAvatarUploading(userId uuid.UUID, avatarLnk string) error
 	DeleteUserAvatar(userId uuid.UUID) error
 }
 

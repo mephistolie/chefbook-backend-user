@@ -80,7 +80,7 @@ func (s *UserServer) SetUserDescription(_ context.Context, req *api.SetUserDescr
 	if err != nil {
 		return nil, fail.GrpcInvalidBody
 	}
-	if req.Description != nil && len(*req.Description) > 0 {
+	if req.Description != nil && len(*req.Description) > maxDescriptionLength {
 		description := (*req.Description)[0:maxDescriptionLength]
 		req.Description = &description
 	}
@@ -99,15 +99,16 @@ func (s *UserServer) GenerateUserAvatarUploadLink(_ context.Context, req *api.Ge
 		return nil, fail.GrpcInvalidBody
 	}
 
-	avatarId, link, formData, err := s.service.GenerateUserAvatarUploadLink(userId)
+	uploading, err := s.service.GenerateUserAvatarUploadLink(userId)
 	if err != nil {
 		return nil, err
 	}
 
 	return &api.GenerateUserAvatarUploadLinkResponse{
-		AvatarId: avatarId.String(),
-		Link:     link,
-		FormData: formData,
+		AvatarLink: uploading.PictureLink,
+		UploadLink: uploading.UploadUrl,
+		FormData:   uploading.FormData,
+		MaxSize:    uploading.MaxSize,
 	}, nil
 }
 
@@ -116,12 +117,8 @@ func (s *UserServer) ConfirmUserAvatarUploading(_ context.Context, req *api.Conf
 	if err != nil {
 		return nil, fail.GrpcInvalidBody
 	}
-	avatarId, err := uuid.Parse(req.AvatarId)
-	if err != nil {
-		return nil, fail.GrpcInvalidBody
-	}
 
-	if err = s.service.ConfirmUserAvatarUploading(userId, avatarId); err != nil {
+	if err = s.service.ConfirmUserAvatarUploading(userId, req.AvatarLink); err != nil {
 		return nil, err
 	}
 

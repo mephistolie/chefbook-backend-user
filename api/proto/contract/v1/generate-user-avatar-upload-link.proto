@@ -8,7 +8,8 @@ message GenerateUserAvatarUploadLinkRequest {
 }
 
 message GenerateUserAvatarUploadLinkResponse {
-  string avatarId = 1;
-  string link = 2;
+  string avatarLink = 1;
+  string uploadLink = 2;
   map<string, string> formData = 3;
+  int64 maxSize = 4;
 }

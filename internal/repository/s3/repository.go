@@ -7,8 +7,11 @@ import (
 	"github.com/mephistolie/chefbook-backend-common/log"
 	"github.com/mephistolie/chefbook-backend-common/responses/fail"
 	"github.com/mephistolie/chefbook-backend-user/internal/config"
+	"github.com/mephistolie/chefbook-backend-user/internal/entity"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"net/url"
+	"strings"
 	"time"
 )
 
@@ -45,7 +48,7 @@ func (r *Repository) GetUserAvatarLink(userId, avatarId uuid.UUID) string {
 	return fmt.Sprintf("https://%s/%s", r.bucket, objectPath)
 }
 
-func (r *Repository) GenerateUserAvatarUploadLink(userId, avatarId uuid.UUID) (string, map[string]string, error) {
+func (r *Repository) GenerateUserAvatarUploadLink(userId, avatarId uuid.UUID) (entity.PictureUpload, error) {
 	return r.generateImageUploadLink(r.getUserAvatarObjectPath(userId, avatarId))
 }
 
@@ -68,36 +71,64 @@ func (r *Repository) getUserAvatarObjectPath(userId, avatarId uuid.UUID) string 
 	return fmt.Sprintf("%s/%s/%s/%s", usersDir, userId, avatarsDir, avatarId)
 }
 
-func (r *Repository) generateImageUploadLink(objectName string) (string, map[string]string, error) {
+func (r *Repository) generateImageUploadLink(objectName string) (entity.PictureUpload, error) {
 	policy := minio.NewPostPolicy()
 
 	if err := policy.SetBucket(r.bucket); err != nil {
 		log.Error("unable to set bucket in post policy: ", err)
-		return "", map[string]string{}, fail.GrpcUnknown
+		return entity.PictureUpload{}, fail.GrpcUnknown
 	}
 	if err := policy.SetKey(objectName); err != nil {
 		log.Errorf("unable to set object %s in post policy: %s", objectName, err)
-		return "", map[string]string{}, fail.GrpcUnknown
+		return entity.PictureUpload{}, fail.GrpcUnknown
 	}
 	if err := policy.SetContentTypeStartsWith("image"); err != nil {
 		log.Errorf("unable to set content type in post policy: %s", objectName, err)
-		return "", map[string]string{}, fail.GrpcUnknown
+		return entity.PictureUpload{}, fail.GrpcUnknown
 	}
 	if err := policy.SetContentLengthRange(0, avatarMaxSize); err != nil {
 		log.Errorf("unable to set content length in post policy: %s", objectName, err)
-		return "", map[string]string{}, fail.GrpcUnknown
+		return entity.PictureUpload{}, fail.GrpcUnknown
 	}
 	if err := policy.SetExpires(time.Now().Add(1 * time.Hour)); err != nil {
 		log.Errorf("unable to set expiration in post policy: %s", objectName, err)
-		return "", map[string]string{}, fail.GrpcUnknown
+		return entity.PictureUpload{}, fail.GrpcUnknown
 	}
 
-	_, formData, err := r.client.PresignedPostPolicy(context.Background(), policy)
+	uploadUrl, formData, err := r.client.PresignedPostPolicy(context.Background(), policy)
 	if err != nil {
 		log.Errorf("unable to generate presigned link for uploading object %s: %s", objectName, err)
-		return "", map[string]string{}, fail.GrpcUnknown
+		return entity.PictureUpload{}, fail.GrpcUnknown
 	}
-	url := fmt.Sprintf("https://%s", r.bucket)
 
-	return url, formData, nil
+	return entity.PictureUpload{
+		PictureLink: fmt.Sprintf("https://%s", r.bucket),
+		UploadUrl:   uploadUrl.String(),
+		FormData:    formData,
+		MaxSize:     avatarMaxSize,
+	}, nil
+}
+
+func (r *Repository) GetAvatarIdByLink(userId uuid.UUID, link string) *uuid.UUID {
+	pictureUrl, err := url.Parse(link)
+	if err != nil || pictureUrl.Host != r.bucket {
+		return nil
+	}
+	fragments := strings.Split(pictureUrl.Path, "/")
+	if len(fragments) > 1 && fragments[0] == "" {
+		fragments = fragments[1:]
+	}
+	if len(fragments) != 4 ||
+		fragments[0] != usersDir ||
+		fragments[1] != userId.String() ||
+		fragments[2] != avatarsDir {
+		log.Debugf("Invalid fragments while parsing picture link %s", fragments)
+		return nil
+	}
+	avatarId, err := uuid.Parse(fragments[3])
+	if err != nil {
+		log.Debugf("Invalid picture ID while parsing picture link %s", link)
+		return nil
+	}
+	return &avatarId
 }
