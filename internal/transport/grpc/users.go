@@ -58,12 +58,12 @@ func (s *UserServer) SetUserName(_ context.Context, req *api.SetUserNameRequest)
 	if err != nil {
 		return nil, fail.GrpcInvalidBody
 	}
-	if req.FirstName != nil && len(*req.FirstName) > maxNameLength {
-		firstName := (*req.FirstName)[0:maxNameLength]
+	if req.FirstName != nil && len([]rune(*req.FirstName)) > maxNameLength {
+		firstName := string([]rune(*req.FirstName)[0:maxNameLength])
 		req.FirstName = &firstName
 	}
-	if req.LastName != nil && len(*req.LastName) > maxNameLength {
-		lastName := (*req.LastName)[0:maxNameLength]
+	if req.LastName != nil && len([]rune(*req.LastName)) > maxNameLength {
+		lastName := string([]rune(*req.LastName)[0:maxNameLength])
 		req.LastName = &lastName
 	}
 
@@ -80,8 +80,8 @@ func (s *UserServer) SetUserDescription(_ context.Context, req *api.SetUserDescr
 	if err != nil {
 		return nil, fail.GrpcInvalidBody
 	}
-	if req.Description != nil && len(*req.Description) > maxDescriptionLength {
-		description := (*req.Description)[0:maxDescriptionLength]
+	if req.Description != nil && len([]rune(*req.Description)) > maxDescriptionLength {
+		description := string([]rune(*req.Description)[0:maxDescriptionLength])
 		req.Description = &description
 	}
 
