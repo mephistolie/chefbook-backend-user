@@ -83,15 +83,15 @@ func (r *Repository) generateImageUploadLink(objectName string) (entity.PictureU
 		return entity.PictureUpload{}, fail.GrpcUnknown
 	}
 	if err := policy.SetContentTypeStartsWith("image"); err != nil {
-		log.Errorf("unable to set content type in post policy: %s", objectName, err)
+		log.Errorf("unable to set content type in post policy: %s", err)
 		return entity.PictureUpload{}, fail.GrpcUnknown
 	}
 	if err := policy.SetContentLengthRange(0, avatarMaxSize); err != nil {
-		log.Errorf("unable to set content length in post policy: %s", objectName, err)
+		log.Errorf("unable to set content length in post policy: %s", err)
 		return entity.PictureUpload{}, fail.GrpcUnknown
 	}
 	if err := policy.SetExpires(time.Now().Add(1 * time.Hour)); err != nil {
-		log.Errorf("unable to set expiration in post policy: %s", objectName, err)
+		log.Errorf("unable to set expiration in post policy: %s", err)
 		return entity.PictureUpload{}, fail.GrpcUnknown
 	}
 
@@ -102,7 +102,7 @@ func (r *Repository) generateImageUploadLink(objectName string) (entity.PictureU
 	}
 
 	return entity.PictureUpload{
-		PictureLink: fmt.Sprintf("https://%s", r.bucket),
+		PictureLink: fmt.Sprintf("https://%s/%s", r.bucket, objectName),
 		UploadUrl:   uploadUrl.String(),
 		FormData:    formData,
 		MaxSize:     avatarMaxSize,
