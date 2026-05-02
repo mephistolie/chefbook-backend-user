@@ -1,21 +1,23 @@
 package repository
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/mephistolie/chefbook-backend-user/internal/entity"
 )
 
 type User interface {
-	CreateUser(userId uuid.UUID, messageId uuid.UUID) error
-	ImportFirebaseName(userId uuid.UUID, username *string, messageId uuid.UUID) error
-	DeleteUser(userId uuid.UUID, messageId uuid.UUID) error
+	CreateUser(ctx context.Context, userId uuid.UUID, messageId uuid.UUID) error
+	ImportFirebaseName(ctx context.Context, userId uuid.UUID, username *string, messageId uuid.UUID) error
+	DeleteUser(ctx context.Context, userId uuid.UUID, messageId uuid.UUID) error
 
-	GetUsersMinimalInfos(userIds []uuid.UUID) map[uuid.UUID]entity.UserMinimalInfo
-	GetUserInfo(userId uuid.UUID) (entity.UserInfo, error)
-	SetUserName(userId uuid.UUID, firstName, lastName *string) error
-	SetUserDescription(userId uuid.UUID, description *string) error
-	RegisterAvatarUploading(userId uuid.UUID) (uuid.UUID, error)
-	SetUserAvatar(userId uuid.UUID, avatarId *uuid.UUID) (*uuid.UUID, error)
+	GetUsersMinimalInfos(ctx context.Context, userIds []uuid.UUID) map[uuid.UUID]entity.UserMinimalInfo
+	GetUserInfo(ctx context.Context, userId uuid.UUID) (entity.UserInfo, error)
+	SetUserName(ctx context.Context, userId uuid.UUID, firstName, lastName *string) error
+	SetUserDescription(ctx context.Context, userId uuid.UUID, description *string) error
+	RegisterAvatarUploading(ctx context.Context, userId uuid.UUID) (uuid.UUID, error)
+	SetUserAvatar(ctx context.Context, userId uuid.UUID, avatarId *uuid.UUID) (*uuid.UUID, error)
 }
 
 type S3 interface {

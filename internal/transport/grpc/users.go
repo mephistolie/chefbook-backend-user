@@ -12,7 +12,7 @@ const (
 	maxDescriptionLength = 150
 )
 
-func (s *UserServer) GetUsersMinInfo(_ context.Context, req *api.GetUsersMinInfoRequest) (*api.GetUsersMinInfoResponse, error) {
+func (s *UserServer) GetUsersMinInfo(ctx context.Context, req *api.GetUsersMinInfoRequest) (*api.GetUsersMinInfoResponse, error) {
 	var userIds []uuid.UUID
 	for _, rawId := range req.UserIds {
 		if userId, err := uuid.Parse(rawId); err == nil {
@@ -20,7 +20,7 @@ func (s *UserServer) GetUsersMinInfo(_ context.Context, req *api.GetUsersMinInfo
 		}
 	}
 
-	response := s.service.User.GetUsersMinimalInfos(userIds)
+	response := s.service.User.GetUsersMinimalInfos(ctx, userIds)
 
 	infos := make(map[string]*api.UserMinInfo)
 	for id, info := range response {
@@ -33,13 +33,13 @@ func (s *UserServer) GetUsersMinInfo(_ context.Context, req *api.GetUsersMinInfo
 	return &api.GetUsersMinInfoResponse{Infos: infos}, nil
 }
 
-func (s *UserServer) GetUserInfo(_ context.Context, req *api.GetUserInfoRequest) (*api.GetUserInfoResponse, error) {
+func (s *UserServer) GetUserInfo(ctx context.Context, req *api.GetUserInfoRequest) (*api.GetUserInfoResponse, error) {
 	userId, err := uuid.Parse(req.UserId)
 	if err != nil {
 		return nil, fail.GrpcInvalidBody
 	}
 
-	info, err := s.service.GetUserInfo(userId)
+	info, err := s.service.GetUserInfo(ctx, userId)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func (s *UserServer) GetUserInfo(_ context.Context, req *api.GetUserInfoRequest)
 	}, nil
 }
 
-func (s *UserServer) SetUserName(_ context.Context, req *api.SetUserNameRequest) (*api.SetUserNameResponse, error) {
+func (s *UserServer) SetUserName(ctx context.Context, req *api.SetUserNameRequest) (*api.SetUserNameResponse, error) {
 	userId, err := uuid.Parse(req.UserId)
 	if err != nil {
 		return nil, fail.GrpcInvalidBody
@@ -67,7 +67,7 @@ func (s *UserServer) SetUserName(_ context.Context, req *api.SetUserNameRequest)
 		req.LastName = &lastName
 	}
 
-	err = s.service.SetUserName(userId, req.FirstName, req.LastName)
+	err = s.service.SetUserName(ctx, userId, req.FirstName, req.LastName)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (s *UserServer) SetUserName(_ context.Context, req *api.SetUserNameRequest)
 	return &api.SetUserNameResponse{Message: "user name changed"}, nil
 }
 
-func (s *UserServer) SetUserDescription(_ context.Context, req *api.SetUserDescriptionRequest) (*api.SetUserDescriptionResponse, error) {
+func (s *UserServer) SetUserDescription(ctx context.Context, req *api.SetUserDescriptionRequest) (*api.SetUserDescriptionResponse, error) {
 	userId, err := uuid.Parse(req.UserId)
 	if err != nil {
 		return nil, fail.GrpcInvalidBody
@@ -85,7 +85,7 @@ func (s *UserServer) SetUserDescription(_ context.Context, req *api.SetUserDescr
 		req.Description = &description
 	}
 
-	err = s.service.SetUserDescription(userId, req.Description)
+	err = s.service.SetUserDescription(ctx, userId, req.Description)
 	if err != nil {
 		return nil, err
 	}
@@ -93,13 +93,13 @@ func (s *UserServer) SetUserDescription(_ context.Context, req *api.SetUserDescr
 	return &api.SetUserDescriptionResponse{Message: "user description changed"}, nil
 }
 
-func (s *UserServer) GenerateUserAvatarUploadLink(_ context.Context, req *api.GenerateUserAvatarUploadLinkRequest) (*api.GenerateUserAvatarUploadLinkResponse, error) {
+func (s *UserServer) GenerateUserAvatarUploadLink(ctx context.Context, req *api.GenerateUserAvatarUploadLinkRequest) (*api.GenerateUserAvatarUploadLinkResponse, error) {
 	userId, err := uuid.Parse(req.UserId)
 	if err != nil {
 		return nil, fail.GrpcInvalidBody
 	}
 
-	uploading, err := s.service.GenerateUserAvatarUploadLink(userId)
+	uploading, err := s.service.GenerateUserAvatarUploadLink(ctx, userId)
 	if err != nil {
 		return nil, err
 	}
@@ -112,26 +112,26 @@ func (s *UserServer) GenerateUserAvatarUploadLink(_ context.Context, req *api.Ge
 	}, nil
 }
 
-func (s *UserServer) ConfirmUserAvatarUploading(_ context.Context, req *api.ConfirmUserAvatarUploadingRequest) (*api.ConfirmUserAvatarUploadingResponse, error) {
+func (s *UserServer) ConfirmUserAvatarUploading(ctx context.Context, req *api.ConfirmUserAvatarUploadingRequest) (*api.ConfirmUserAvatarUploadingResponse, error) {
 	userId, err := uuid.Parse(req.UserId)
 	if err != nil {
 		return nil, fail.GrpcInvalidBody
 	}
 
-	if err = s.service.ConfirmUserAvatarUploading(userId, req.AvatarLink); err != nil {
+	if err = s.service.ConfirmUserAvatarUploading(ctx, userId, req.AvatarLink); err != nil {
 		return nil, err
 	}
 
 	return &api.ConfirmUserAvatarUploadingResponse{Message: "new avatar applied"}, nil
 }
 
-func (s *UserServer) DeleteUserAvatar(_ context.Context, req *api.DeleteUserAvatarRequest) (*api.DeleteUserAvatarResponse, error) {
+func (s *UserServer) DeleteUserAvatar(ctx context.Context, req *api.DeleteUserAvatarRequest) (*api.DeleteUserAvatarResponse, error) {
 	userId, err := uuid.Parse(req.UserId)
 	if err != nil {
 		return nil, fail.GrpcInvalidBody
 	}
 
-	if err = s.service.DeleteUserAvatar(userId); err != nil {
+	if err = s.service.DeleteUserAvatar(ctx, userId); err != nil {
 		return nil, err
 	}
 

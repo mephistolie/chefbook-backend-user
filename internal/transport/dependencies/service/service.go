@@ -1,6 +1,8 @@
 package service
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/mephistolie/chefbook-backend-common/firebase"
 	"github.com/mephistolie/chefbook-backend-common/log"
@@ -18,19 +20,19 @@ type Service struct {
 }
 
 type User interface {
-	GetUsersMinimalInfos(userIds []uuid.UUID) map[uuid.UUID]entity.UserMinimalInfo
-	GetUserInfo(userId uuid.UUID) (entity.UserInfo, error)
-	SetUserName(userId uuid.UUID, firstName, lastName *string) error
-	SetUserDescription(userId uuid.UUID, description *string) error
-	GenerateUserAvatarUploadLink(userId uuid.UUID) (entity.PictureUpload, error)
-	ConfirmUserAvatarUploading(userId uuid.UUID, avatarLnk string) error
-	DeleteUserAvatar(userId uuid.UUID) error
+	GetUsersMinimalInfos(ctx context.Context, userIds []uuid.UUID) map[uuid.UUID]entity.UserMinimalInfo
+	GetUserInfo(ctx context.Context, userId uuid.UUID) (entity.UserInfo, error)
+	SetUserName(ctx context.Context, userId uuid.UUID, firstName, lastName *string) error
+	SetUserDescription(ctx context.Context, userId uuid.UUID, description *string) error
+	GenerateUserAvatarUploadLink(ctx context.Context, userId uuid.UUID) (entity.PictureUpload, error)
+	ConfirmUserAvatarUploading(ctx context.Context, userId uuid.UUID, avatarLnk string) error
+	DeleteUserAvatar(ctx context.Context, userId uuid.UUID) error
 }
 
 type MQ interface {
-	CreateUser(userId uuid.UUID, messageId uuid.UUID) error
-	ImportFirebaseProfile(userId uuid.UUID, firebaseId string, messageId uuid.UUID) error
-	DeleteUser(userId uuid.UUID, messageId uuid.UUID) error
+	CreateUser(ctx context.Context, userId uuid.UUID, messageId uuid.UUID) error
+	ImportFirebaseProfile(ctx context.Context, userId uuid.UUID, firebaseId string, messageId uuid.UUID) error
+	DeleteUser(ctx context.Context, userId uuid.UUID, messageId uuid.UUID) error
 }
 
 func New(

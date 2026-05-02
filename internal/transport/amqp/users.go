@@ -1,7 +1,9 @@
 package amqp
 
 import (
+	"context"
 	"encoding/json"
+
 	"github.com/google/uuid"
 	auth "github.com/mephistolie/chefbook-backend-auth/api/mq"
 	"github.com/mephistolie/chefbook-backend-common/log"
@@ -19,7 +21,7 @@ func (s *Server) handleProfileCreatedMsg(messageId uuid.UUID, data []byte) error
 		return err
 	}
 
-	return s.service.CreateUser(userId, messageId)
+	return s.service.CreateUser(context.Background(), userId, messageId)
 }
 
 func (s *Server) handleFirebaseImportMsg(messageId uuid.UUID, data []byte) error {
@@ -34,7 +36,7 @@ func (s *Server) handleFirebaseImportMsg(messageId uuid.UUID, data []byte) error
 	}
 
 	log.Infof("import firebase profile %s for user %s...", body.FirebaseId, body.UserId)
-	return s.service.ImportFirebaseProfile(userId, body.FirebaseId, messageId)
+	return s.service.ImportFirebaseProfile(context.Background(), userId, body.FirebaseId, messageId)
 }
 
 func (s *Server) handleProfileDeletedMsg(messageId uuid.UUID, data []byte) error {
@@ -49,5 +51,5 @@ func (s *Server) handleProfileDeletedMsg(messageId uuid.UUID, data []byte) error
 	}
 
 	log.Infof("deleting user %s...", body.UserId)
-	return s.service.DeleteUser(userId, messageId)
+	return s.service.DeleteUser(context.Background(), userId, messageId)
 }
