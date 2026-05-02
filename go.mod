@@ -15,7 +15,7 @@ require (
 	github.com/mephistolie/chefbook-backend-user/api v1.4.0
 	github.com/minio/minio-go/v7 v7.1.0
 	github.com/peterbourgon/ff/v3 v3.4.0
-	github.com/wagslane/go-rabbitmq v0.12.3
+	github.com/wagslane/go-rabbitmq v0.15.0
 	google.golang.org/grpc v1.80.0
 	k8s.io/utils v0.0.0-20260319190234-28399d86e0b5
 )
