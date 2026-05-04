@@ -46,7 +46,7 @@ func (s *Service) GenerateUserAvatarUploadLink(ctx context.Context, userId uuid.
 		return entity.PictureUpload{}, err
 	}
 
-	uploading, err := s.s3.GenerateUserAvatarUploadLink(userId, avatarId)
+	uploading, err := s.s3.GenerateUserAvatarUploadLink(ctx, userId, avatarId)
 	if err != nil {
 		return entity.PictureUpload{}, err
 	}
@@ -60,7 +60,7 @@ func (s *Service) ConfirmUserAvatarUploading(ctx context.Context, userId uuid.UU
 		return fail.GrpcInvalidBody
 	}
 
-	if !s.s3.CheckAvatarExists(userId, *avatarId) {
+	if !s.s3.CheckAvatarExists(ctx, userId, *avatarId) {
 		return fail.GrpcNotFound
 	}
 	return s.setUserAvatar(ctx, userId, avatarId)
@@ -78,7 +78,7 @@ func (s *Service) setUserAvatar(ctx context.Context, userId uuid.UUID, avatarId 
 
 	go func() {
 		if previousAvatarId != nil {
-			_ = s.s3.DeleteAvatar(userId, *previousAvatarId)
+			_ = s.s3.DeleteAvatar(context.WithoutCancel(ctx), userId, *previousAvatarId)
 		}
 	}()
 

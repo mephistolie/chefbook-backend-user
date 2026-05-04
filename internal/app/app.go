@@ -30,7 +30,7 @@ func Run(cfg *config.Config) {
 
 	repository := postgres.NewRepository(db)
 
-	userService, err := service.New(cfg, repository)
+	userService, err := service.New(context.Background(), cfg, repository)
 	if err != nil {
 		log.Fatal(err)
 		return

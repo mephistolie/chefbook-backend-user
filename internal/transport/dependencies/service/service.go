@@ -36,6 +36,7 @@ type MQ interface {
 }
 
 func New(
+	ctx context.Context,
 	cfg *config.Config,
 	repo repository.User,
 ) (*Service, error) {

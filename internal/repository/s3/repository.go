@@ -48,19 +48,19 @@ func (r *Repository) GetUserAvatarLink(userId, avatarId uuid.UUID) string {
 	return fmt.Sprintf("https://%s/%s", r.bucket, objectPath)
 }
 
-func (r *Repository) GenerateUserAvatarUploadLink(userId, avatarId uuid.UUID) (entity.PictureUpload, error) {
-	return r.generateImageUploadLink(r.getUserAvatarObjectPath(userId, avatarId))
+func (r *Repository) GenerateUserAvatarUploadLink(ctx context.Context, userId, avatarId uuid.UUID) (entity.PictureUpload, error) {
+	return r.generateImageUploadLink(ctx, r.getUserAvatarObjectPath(userId, avatarId))
 }
 
-func (r *Repository) CheckAvatarExists(userId, avatarId uuid.UUID) bool {
-	_, err := r.client.GetObjectACL(context.Background(), r.bucket, r.getUserAvatarObjectPath(userId, avatarId))
+func (r *Repository) CheckAvatarExists(ctx context.Context, userId, avatarId uuid.UUID) bool {
+	_, err := r.client.GetObjectACL(ctx, r.bucket, r.getUserAvatarObjectPath(userId, avatarId))
 	return err == nil
 }
 
-func (r *Repository) DeleteAvatar(userId, avatarId uuid.UUID) error {
+func (r *Repository) DeleteAvatar(ctx context.Context, userId, avatarId uuid.UUID) error {
 	object := r.getUserAvatarObjectPath(userId, avatarId)
 	opts := minio.RemoveObjectOptions{ForceDelete: true}
-	if err := r.client.RemoveObject(context.Background(), r.bucket, object, opts); err != nil {
+	if err := r.client.RemoveObject(ctx, r.bucket, object, opts); err != nil {
 		log.Warnf("unable to delete user %s avatar: %s", userId, err)
 		return fail.GrpcUnknown
 	}
@@ -71,7 +71,7 @@ func (r *Repository) getUserAvatarObjectPath(userId, avatarId uuid.UUID) string 
 	return fmt.Sprintf("%s/%s/%s/%s", usersDir, userId, avatarsDir, avatarId)
 }
 
-func (r *Repository) generateImageUploadLink(objectName string) (entity.PictureUpload, error) {
+func (r *Repository) generateImageUploadLink(ctx context.Context, objectName string) (entity.PictureUpload, error) {
 	policy := minio.NewPostPolicy()
 
 	if err := policy.SetBucket(r.bucket); err != nil {
@@ -95,7 +95,7 @@ func (r *Repository) generateImageUploadLink(objectName string) (entity.PictureU
 		return entity.PictureUpload{}, fail.GrpcUnknown
 	}
 
-	uploadUrl, formData, err := r.client.PresignedPostPolicy(context.Background(), policy)
+	uploadUrl, formData, err := r.client.PresignedPostPolicy(ctx, policy)
 	if err != nil {
 		log.Errorf("unable to generate presigned link for uploading object %s: %s", objectName, err)
 		return entity.PictureUpload{}, fail.GrpcUnknown

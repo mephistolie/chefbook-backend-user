@@ -22,8 +22,8 @@ type User interface {
 
 type S3 interface {
 	GetUserAvatarLink(userId, avatarId uuid.UUID) string
-	GenerateUserAvatarUploadLink(userId, avatarId uuid.UUID) (entity.PictureUpload, error)
-	CheckAvatarExists(userId, avatarId uuid.UUID) bool
-	DeleteAvatar(userId, avatarId uuid.UUID) error
+	GenerateUserAvatarUploadLink(ctx context.Context, userId, avatarId uuid.UUID) (entity.PictureUpload, error)
+	CheckAvatarExists(ctx context.Context, userId, avatarId uuid.UUID) bool
+	DeleteAvatar(ctx context.Context, userId, avatarId uuid.UUID) error
 	GetAvatarIdByLink(userId uuid.UUID, link string) *uuid.UUID
 }
