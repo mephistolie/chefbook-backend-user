@@ -48,7 +48,7 @@ func New(
 		if err != nil {
 			return nil, err
 		}
-		log.Info("Firebase client initialized")
+		log.AutoInfo("Firebase client initialized")
 	}
 
 	s3, err := s32.NewRepository(cfg.S3)

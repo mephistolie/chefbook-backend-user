@@ -26,7 +26,7 @@ func (r *Repository) CreateUser(ctx context.Context, userId uuid.UUID, messageId
 	`, usersTable)
 
 	if _, err = tx.ExecContext(ctx, query, userId); err != nil {
-		log.Errorf("unable to create user %s: %s", userId, err)
+		log.AutoErrorf("unable to create user %s: %s", userId, err)
 		return errorWithTransactionRollback(tx, fail.GrpcUnknown)
 	}
 
@@ -59,7 +59,7 @@ func (r *Repository) ImportFirebaseName(ctx context.Context, userId uuid.UUID, u
 	`, usersTable)
 
 	if _, err = tx.ExecContext(ctx, query, firstName, secondName, userId); err != nil {
-		log.Errorf("unable to create user %s: %s", userId, err)
+		log.AutoErrorf("unable to create user %s: %s", userId, err)
 		return errorWithTransactionRollback(tx, fail.GrpcUnknown)
 	}
 
@@ -82,7 +82,7 @@ func (r *Repository) DeleteUser(ctx context.Context, userId uuid.UUID, messageId
 	`, usersTable)
 
 	if _, err := tx.ExecContext(ctx, query, userId); err != nil {
-		log.Errorf("unable to delete user %s: %s", userId, err)
+		log.AutoErrorf("unable to delete user %s: %s", userId, err)
 		return errorWithTransactionRollback(tx, fail.GrpcUnknown)
 	}
 
@@ -102,7 +102,7 @@ func (r *Repository) handleMessageIdempotently(ctx context.Context, messageId uu
 
 	if _, err = tx.ExecContext(ctx, addMessageQuery, messageId); err != nil {
 		if !isUniqueViolationError(err) {
-			log.Error("unable to add message to inbox: ", err)
+			log.AutoError("unable to add message to inbox: ", err)
 		}
 		return nil, errorWithTransactionRollback(tx, err)
 	}

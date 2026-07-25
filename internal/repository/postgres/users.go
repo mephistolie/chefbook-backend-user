@@ -20,7 +20,7 @@ func (r *Repository) GetUsersMinimalInfos(ctx context.Context, userIds []uuid.UU
 
 	rows, err := r.db.QueryContext(ctx, query, userIds)
 	if err != nil {
-		log.Error("unable to get minimal info for users: ", err)
+		log.AutoError("unable to get minimal info for users: ", err)
 		return map[uuid.UUID]entity.UserMinimalInfo{}
 	}
 	defer rows.Close()
@@ -31,7 +31,7 @@ func (r *Repository) GetUsersMinimalInfos(ctx context.Context, userIds []uuid.UU
 		var lastName *string
 
 		if err = rows.Scan(&info.UserId, &firstName, &lastName, &info.AvatarId); err != nil {
-			log.Error("unable to parse minimal info for user: ", err)
+			log.AutoError("unable to parse minimal info for user: ", err)
 			continue
 		}
 
@@ -40,7 +40,7 @@ func (r *Repository) GetUsersMinimalInfos(ctx context.Context, userIds []uuid.UU
 		infos[info.UserId] = info
 	}
 	if err = rows.Err(); err != nil {
-		log.Error("unable to iterate minimal info for users: ", err)
+		log.AutoError("unable to iterate minimal info for users: ", err)
 		return map[uuid.UUID]entity.UserMinimalInfo{}
 	}
 
@@ -76,7 +76,7 @@ func (r *Repository) GetUserInfo(ctx context.Context, userId uuid.UUID) (entity.
 
 	row := r.db.QueryRowContext(ctx, query, userId)
 	if err := row.Scan(&info.UserId, &info.FirstName, &info.LastName, &info.Description, &info.AvatarId); err != nil {
-		log.Warnf("unable to get user %s info: %s", userId, err)
+		log.AutoWarnf("unable to get user %s info: %s", userId, err)
 		return entity.UserInfo{}, fail.GrpcNotFound
 	}
 
@@ -91,7 +91,7 @@ func (r *Repository) SetUserName(ctx context.Context, userId uuid.UUID, firstNam
 	`, usersTable)
 
 	if _, err := r.db.ExecContext(ctx, query, firstName, lastName, userId); err != nil {
-		log.Warnf("unable to set user %s name: %s", userId, err)
+		log.AutoWarnf("unable to set user %s name: %s", userId, err)
 		return fail.GrpcUnknown
 	}
 
@@ -106,7 +106,7 @@ func (r *Repository) SetUserDescription(ctx context.Context, userId uuid.UUID, d
 	`, usersTable)
 
 	if _, err := r.db.ExecContext(ctx, query, description, userId); err != nil {
-		log.Warnf("unable to set user %s description: %s", userId, err)
+		log.AutoWarnf("unable to set user %s description: %s", userId, err)
 		return fail.GrpcUnknown
 	}
 
@@ -135,7 +135,7 @@ func (r *Repository) RegisterAvatarUploading(ctx context.Context, userId uuid.UU
 	`, avatarUploadsTable)
 
 	if err := r.db.GetContext(ctx, &avatarId, query, userId); err != nil {
-		log.Errorf("unable to register avatar uploading for user %s: %s", userId, err)
+		log.AutoErrorf("unable to register avatar uploading for user %s: %s", userId, err)
 		return uuid.UUID{}, fail.GrpcUnknown
 	}
 
@@ -152,7 +152,7 @@ func (r *Repository) SetUserAvatar(ctx context.Context, userId uuid.UUID, avatar
 	`, usersTable)
 
 	if err := r.db.QueryRowContext(ctx, getPreviousAvatarIdQuery, userId).Scan(&previousAvatarId); err != nil {
-		log.Warnf("unable to get user %s avatar id: %s", userId, err)
+		log.AutoWarnf("unable to get user %s avatar id: %s", userId, err)
 		return nil, fail.GrpcUnknown
 	}
 
@@ -172,7 +172,7 @@ func (r *Repository) SetUserAvatar(ctx context.Context, userId uuid.UUID, avatar
 	`, usersTable)
 
 	if _, err := tx.ExecContext(ctx, setAvatarQuery, avatarId, userId); err != nil {
-		log.Warnf("unable to set user %s avatar id: %s", userId, err)
+		log.AutoWarnf("unable to set user %s avatar id: %s", userId, err)
 		return nil, fail.GrpcUnknown
 	}
 
@@ -183,7 +183,7 @@ func (r *Repository) SetUserAvatar(ctx context.Context, userId uuid.UUID, avatar
 	`, avatarUploadsTable)
 
 		if _, err := tx.ExecContext(ctx, deleteUploadingQuery, *avatarId, userId); err != nil {
-			log.Warnf("unable to delete avatar uploading record for user %s: %s", userId, err)
+			log.AutoWarnf("unable to delete avatar uploading record for user %s: %s", userId, err)
 			return nil, fail.GrpcUnknown
 		}
 	}

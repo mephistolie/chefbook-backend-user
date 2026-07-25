@@ -61,7 +61,7 @@ func (r *Repository) DeleteAvatar(ctx context.Context, userId, avatarId uuid.UUI
 	object := r.getUserAvatarObjectPath(userId, avatarId)
 	opts := minio.RemoveObjectOptions{ForceDelete: true}
 	if err := r.client.RemoveObject(ctx, r.bucket, object, opts); err != nil {
-		log.Warnf("unable to delete user %s avatar: %s", userId, err)
+		log.AutoWarnf("unable to delete user %s avatar: %s", userId, err)
 		return fail.GrpcUnknown
 	}
 	return nil
@@ -75,29 +75,29 @@ func (r *Repository) generateImageUploadLink(ctx context.Context, objectName str
 	policy := minio.NewPostPolicy()
 
 	if err := policy.SetBucket(r.bucket); err != nil {
-		log.Error("unable to set bucket in post policy: ", err)
+		log.AutoError("unable to set bucket in post policy: ", err)
 		return entity.PictureUpload{}, fail.GrpcUnknown
 	}
 	if err := policy.SetKey(objectName); err != nil {
-		log.Errorf("unable to set object %s in post policy: %s", objectName, err)
+		log.AutoErrorf("unable to set object %s in post policy: %s", objectName, err)
 		return entity.PictureUpload{}, fail.GrpcUnknown
 	}
 	if err := policy.SetContentTypeStartsWith("image"); err != nil {
-		log.Errorf("unable to set content type in post policy: %s", err)
+		log.AutoErrorf("unable to set content type in post policy: %s", err)
 		return entity.PictureUpload{}, fail.GrpcUnknown
 	}
 	if err := policy.SetContentLengthRange(0, avatarMaxSize); err != nil {
-		log.Errorf("unable to set content length in post policy: %s", err)
+		log.AutoErrorf("unable to set content length in post policy: %s", err)
 		return entity.PictureUpload{}, fail.GrpcUnknown
 	}
 	if err := policy.SetExpires(time.Now().Add(1 * time.Hour)); err != nil {
-		log.Errorf("unable to set expiration in post policy: %s", err)
+		log.AutoErrorf("unable to set expiration in post policy: %s", err)
 		return entity.PictureUpload{}, fail.GrpcUnknown
 	}
 
 	uploadUrl, formData, err := r.client.PresignedPostPolicy(ctx, policy)
 	if err != nil {
-		log.Errorf("unable to generate presigned link for uploading object %s: %s", objectName, err)
+		log.AutoErrorf("unable to generate presigned link for uploading object %s: %s", objectName, err)
 		return entity.PictureUpload{}, fail.GrpcUnknown
 	}
 
@@ -122,12 +122,12 @@ func (r *Repository) GetAvatarIdByLink(userId uuid.UUID, link string) *uuid.UUID
 		fragments[0] != usersDir ||
 		fragments[1] != userId.String() ||
 		fragments[2] != avatarsDir {
-		log.Debugf("Invalid fragments while parsing picture link %s", fragments)
+		log.AutoDebugf("Invalid fragments while parsing picture link %s", fragments)
 		return nil
 	}
 	avatarId, err := uuid.Parse(fragments[3])
 	if err != nil {
-		log.Debugf("Invalid picture ID while parsing picture link %s", link)
+		log.AutoDebugf("Invalid picture ID while parsing picture link %s", link)
 		return nil
 	}
 	return &avatarId
