@@ -9,8 +9,7 @@ message GetUserInfoRequest {
 
 message GetUserInfoResponse {
   string userId = 1;
-  optional string firstName = 2;
-  optional string lastName = 3;
-  optional string description = 4;
-  optional string avatar = 5;
+  optional string displayName = 2;
+  optional string description = 3;
+  optional string avatar = 4;
 }

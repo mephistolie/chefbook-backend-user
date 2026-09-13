@@ -3,12 +3,11 @@ package v1;
 
 option go_package = "github.com/mephistolie/chefbook-backend-user/api/proto/v1";
 
-message SetUserNameRequest {
+message SetUserDisplayNameRequest {
   string userId = 1;
-  optional string firstName = 2;
-  optional string lastName = 3;
+  optional string displayName = 2;
 }
 
-message SetUserNameResponse {
+message SetUserDisplayNameResponse {
   string message = 1;
 }
