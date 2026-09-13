@@ -2,7 +2,7 @@ package config
 
 import (
 	"context"
-	"github.com/mephistolie/chefbook-backend-common/log"
+	"github.com/mephistolie/chefbook-backend-user/internal/logging"
 )
 
 const (
@@ -57,9 +57,5 @@ func (c Config) Validate() error {
 }
 
 func (c Config) Print() {
-	log.Log(context.Background(), log.Event{
-		Event:     "config.loaded",
-		Message:   "service configuration loaded",
-		Component: "config",
-	})
+	logging.Events{}.ConfigLoaded(context.Background())
 }

@@ -5,9 +5,11 @@ import (
 	"errors"
 	"github.com/google/uuid"
 	"github.com/mephistolie/chefbook-backend-common/firebase"
-	"github.com/mephistolie/chefbook-backend-common/log"
+	"github.com/mephistolie/chefbook-backend-user/internal/logging"
 	"github.com/mephistolie/chefbook-backend-user/internal/service/dependencies/repository"
 )
+
+var events logging.Events
 
 type Service struct {
 	repo     repository.User
@@ -30,23 +32,13 @@ func (s *Service) CreateUser(ctx context.Context, userId uuid.UUID, messageId uu
 
 func (s *Service) ImportFirebaseProfile(ctx context.Context, userId uuid.UUID, firebaseId string, messageId uuid.UUID) error {
 	if s.firebase == nil {
-		log.LogWarn(ctx, log.Event{
-			Event:     "firebase.import.disabled",
-			Message:   "try to import firebase profile with firebase import disabled",
-			Component: log.ComponentFirebase,
-			UserID:    userId.String(),
-		})
+		events.FirebaseImportDisabled(ctx, userId.String())
 		return errors.New("firebase import disabled")
 	}
 
 	firebaseProfile, err := s.firebase.GetProfile(ctx, firebaseId)
 	if err != nil {
-		log.LogWarnError(ctx, log.Event{
-			Event:     "firebase.profile.load_failed",
-			Message:   "unable to get firebase profile",
-			Component: log.ComponentFirebase,
-			UserID:    userId.String(),
-		}, err)
+		events.FirebaseProfileLoadFailed(ctx, userId.String(), err)
 		return err
 	}
 

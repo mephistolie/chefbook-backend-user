@@ -14,7 +14,7 @@ type User interface {
 
 	GetUsersMinimalInfos(ctx context.Context, userIds []uuid.UUID) map[uuid.UUID]entity.UserMinimalInfo
 	GetUserInfo(ctx context.Context, userId uuid.UUID) (entity.UserInfo, error)
-	SetUserName(ctx context.Context, userId uuid.UUID, firstName, lastName *string) error
+	SetUserDisplayName(ctx context.Context, userId uuid.UUID, displayName *string) error
 	SetUserDescription(ctx context.Context, userId uuid.UUID, description *string) error
 	RegisterAvatarUploading(ctx context.Context, userId uuid.UUID) (uuid.UUID, error)
 	SetUserAvatar(ctx context.Context, userId uuid.UUID, avatarId *uuid.UUID) (*uuid.UUID, error)
@@ -25,5 +25,5 @@ type S3 interface {
 	GenerateUserAvatarUploadLink(ctx context.Context, userId, avatarId uuid.UUID) (entity.PictureUpload, error)
 	CheckAvatarExists(ctx context.Context, userId, avatarId uuid.UUID) bool
 	DeleteAvatar(ctx context.Context, userId, avatarId uuid.UUID) error
-	GetAvatarIdByLink(userId uuid.UUID, link string) *uuid.UUID
+	GetAvatarIdByLink(ctx context.Context, userId uuid.UUID, link string) *uuid.UUID
 }

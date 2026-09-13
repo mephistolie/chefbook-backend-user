@@ -32,8 +32,8 @@ func (s *Service) GetUserInfo(ctx context.Context, userId uuid.UUID) (entity.Use
 	return info, nil
 }
 
-func (s *Service) SetUserName(ctx context.Context, userId uuid.UUID, firstName *string, lastName *string) error {
-	return s.repo.SetUserName(ctx, userId, firstName, lastName)
+func (s *Service) SetUserDisplayName(ctx context.Context, userId uuid.UUID, displayName *string) error {
+	return s.repo.SetUserDisplayName(ctx, userId, displayName)
 }
 
 func (s *Service) SetUserDescription(ctx context.Context, userId uuid.UUID, description *string) error {
@@ -55,7 +55,7 @@ func (s *Service) GenerateUserAvatarUploadLink(ctx context.Context, userId uuid.
 }
 
 func (s *Service) ConfirmUserAvatarUploading(ctx context.Context, userId uuid.UUID, avatarLink string) error {
-	avatarId := s.s3.GetAvatarIdByLink(userId, avatarLink)
+	avatarId := s.s3.GetAvatarIdByLink(ctx, userId, avatarLink)
 	if avatarId == nil {
 		return fail.GrpcInvalidBody
 	}

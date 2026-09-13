@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	auth "github.com/mephistolie/chefbook-backend-auth/api/mq"
-	"github.com/mephistolie/chefbook-backend-common/log"
 	"github.com/mephistolie/chefbook-backend-user/internal/config"
+	"github.com/mephistolie/chefbook-backend-user/internal/logging"
 	"github.com/mephistolie/chefbook-backend-user/internal/transport/dependencies/service"
 	amqp "github.com/wagslane/go-rabbitmq"
 	"k8s.io/utils/strings/slices"
 )
+
+var events logging.Events
 
 const queueProfiles = "user.profiles"
 
@@ -59,11 +61,7 @@ func (s *Server) Start() error {
 
 	go func() {
 		if err := s.consumerProfiles.Run(s.handleDelivery); err != nil {
-			log.LogWarnError(context.Background(), log.Event{
-				Event:     "mq.consumer.stopped",
-				Message:   "rabbitmq consumer stopped with error",
-				Component: log.ComponentAMQP,
-			}, err)
+			events.MQConsumerStopped(context.Background(), err)
 		}
 	}()
 
@@ -73,27 +71,14 @@ func (s *Server) Start() error {
 func (s *Server) handleDelivery(delivery amqp.Delivery) amqp.Action {
 	messageId, err := uuid.Parse(delivery.MessageId)
 	if err != nil {
-		log.LogWarn(context.Background(), log.Event{
-			Event:     "mq.message.invalid_id",
-			Message:   "invalid message id",
-			Component: log.ComponentAMQP,
-			Payload: map[string]any{
-				"raw_message_id": delivery.MessageId,
-				"message_type":   delivery.Type,
-			},
-		})
+		events.MQMessageInvalidID(context.Background(), delivery.Type)
 		return amqp.NackDiscard
 	}
 
 	if !slices.Contains(supportedMsgTypes, delivery.Type) {
-		log.LogWarn(context.Background(), log.Event{
-			Event:     "mq.message.unsupported_type",
-			Message:   "unsupported message type",
-			Component: log.ComponentAMQP,
-			MessageID: messageId.String(),
-			Payload: map[string]any{
-				"message_type": delivery.Type,
-			},
+		events.MQMessageUnsupported(context.Background(), logging.MQData{
+			MessageID:   messageId.String(),
+			MessageType: delivery.Type,
 		})
 		return amqp.NackDiscard
 	}
@@ -104,14 +89,9 @@ func (s *Server) handleDelivery(delivery amqp.Delivery) amqp.Action {
 		Body: delivery.Body,
 	}
 	if err = s.handleMessage(msg); err != nil {
-		log.LogWarnError(context.Background(), log.Event{
-			Event:     "mq.message.requeued",
-			Message:   "message requeued",
-			Component: log.ComponentAMQP,
-			MessageID: msg.Id.String(),
-			Payload: map[string]any{
-				"message_type": msg.Type,
-			},
+		events.MQMessageRequeued(context.Background(), logging.MQData{
+			MessageID:   msg.Id.String(),
+			MessageType: msg.Type,
 		}, err)
 		return amqp.NackRequeue
 	}
@@ -121,15 +101,6 @@ func (s *Server) handleDelivery(delivery amqp.Delivery) amqp.Action {
 
 func (s *Server) handleMessage(msg MessageData) error {
 	ctx := context.Background()
-	log.Log(ctx, log.Event{
-		Event:     "mq.message.processing",
-		Message:   "processing message",
-		Component: log.ComponentAMQP,
-		MessageID: msg.Id.String(),
-		Payload: map[string]any{
-			"message_type": msg.Type,
-		},
-	})
 	switch msg.Type {
 	case auth.MsgTypeProfileCreated:
 		return s.handleProfileCreatedMsg(ctx, msg.Id, msg.Body)
@@ -138,14 +109,9 @@ func (s *Server) handleMessage(msg MessageData) error {
 	case auth.MsgTypeProfileDeleted:
 		return s.handleProfileDeletedMsg(ctx, msg.Id, msg.Body)
 	default:
-		log.LogWarn(ctx, log.Event{
-			Event:     "mq.message.unsupported_type",
-			Message:   "got unsupported message type",
-			Component: log.ComponentAMQP,
-			MessageID: msg.Id.String(),
-			Payload: map[string]any{
-				"message_type": msg.Type,
-			},
+		events.MQMessageUnsupported(ctx, logging.MQData{
+			MessageID:   msg.Id.String(),
+			MessageType: msg.Type,
 		})
 		return errors.New("not implemented")
 	}

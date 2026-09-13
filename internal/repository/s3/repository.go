@@ -3,16 +3,17 @@ package s3
 import (
 	"context"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/mephistolie/chefbook-backend-common/log"
-	"github.com/mephistolie/chefbook-backend-common/responses/fail"
-	"github.com/mephistolie/chefbook-backend-user/internal/config"
-	"github.com/mephistolie/chefbook-backend-user/internal/entity"
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/mephistolie/chefbook-backend-common/responses/fail"
+	"github.com/mephistolie/chefbook-backend-user/internal/config"
+	"github.com/mephistolie/chefbook-backend-user/internal/entity"
+	"github.com/mephistolie/chefbook-backend-user/internal/logging"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 const (
@@ -25,6 +26,7 @@ const (
 type Repository struct {
 	client *minio.Client
 	bucket string
+	events logging.Events
 }
 
 func NewRepository(cfg config.S3) (*Repository, error) {
@@ -61,7 +63,7 @@ func (r *Repository) DeleteAvatar(ctx context.Context, userId, avatarId uuid.UUI
 	object := r.getUserAvatarObjectPath(userId, avatarId)
 	opts := minio.RemoveObjectOptions{ForceDelete: true}
 	if err := r.client.RemoveObject(ctx, r.bucket, object, opts); err != nil {
-		log.AutoWarnf("unable to delete user %s avatar: %s", userId, err)
+		r.events.AvatarObjectDeleteFailed(ctx, userId.String(), err)
 		return fail.GrpcUnknown
 	}
 	return nil
@@ -75,29 +77,29 @@ func (r *Repository) generateImageUploadLink(ctx context.Context, objectName str
 	policy := minio.NewPostPolicy()
 
 	if err := policy.SetBucket(r.bucket); err != nil {
-		log.AutoError("unable to set bucket in post policy: ", err)
+		r.events.AvatarUploadPolicyFailed(ctx, "set_bucket", err)
 		return entity.PictureUpload{}, fail.GrpcUnknown
 	}
 	if err := policy.SetKey(objectName); err != nil {
-		log.AutoErrorf("unable to set object %s in post policy: %s", objectName, err)
+		r.events.AvatarUploadPolicyFailed(ctx, "set_key", err)
 		return entity.PictureUpload{}, fail.GrpcUnknown
 	}
 	if err := policy.SetContentTypeStartsWith("image"); err != nil {
-		log.AutoErrorf("unable to set content type in post policy: %s", err)
+		r.events.AvatarUploadPolicyFailed(ctx, "set_content_type", err)
 		return entity.PictureUpload{}, fail.GrpcUnknown
 	}
 	if err := policy.SetContentLengthRange(0, avatarMaxSize); err != nil {
-		log.AutoErrorf("unable to set content length in post policy: %s", err)
+		r.events.AvatarUploadPolicyFailed(ctx, "set_content_length", err)
 		return entity.PictureUpload{}, fail.GrpcUnknown
 	}
 	if err := policy.SetExpires(time.Now().Add(1 * time.Hour)); err != nil {
-		log.AutoErrorf("unable to set expiration in post policy: %s", err)
+		r.events.AvatarUploadPolicyFailed(ctx, "set_expiration", err)
 		return entity.PictureUpload{}, fail.GrpcUnknown
 	}
 
 	uploadUrl, formData, err := r.client.PresignedPostPolicy(ctx, policy)
 	if err != nil {
-		log.AutoErrorf("unable to generate presigned link for uploading object %s: %s", objectName, err)
+		r.events.AvatarUploadLinkGenerationFailed(ctx, err)
 		return entity.PictureUpload{}, fail.GrpcUnknown
 	}
 
@@ -109,7 +111,7 @@ func (r *Repository) generateImageUploadLink(ctx context.Context, objectName str
 	}, nil
 }
 
-func (r *Repository) GetAvatarIdByLink(userId uuid.UUID, link string) *uuid.UUID {
+func (r *Repository) GetAvatarIdByLink(ctx context.Context, userId uuid.UUID, link string) *uuid.UUID {
 	pictureUrl, err := url.Parse(link)
 	if err != nil || pictureUrl.Host != r.bucket {
 		return nil
@@ -122,12 +124,12 @@ func (r *Repository) GetAvatarIdByLink(userId uuid.UUID, link string) *uuid.UUID
 		fragments[0] != usersDir ||
 		fragments[1] != userId.String() ||
 		fragments[2] != avatarsDir {
-		log.AutoDebugf("Invalid fragments while parsing picture link %s", fragments)
+		r.events.AvatarLinkRejected(ctx, "invalid_path")
 		return nil
 	}
 	avatarId, err := uuid.Parse(fragments[3])
 	if err != nil {
-		log.AutoDebugf("Invalid picture ID while parsing picture link %s", link)
+		r.events.AvatarLinkRejected(ctx, "invalid_avatar_id")
 		return nil
 	}
 	return &avatarId

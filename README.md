@@ -14,7 +14,7 @@ The user service owns public user profile fields and avatar upload lifecycle. It
 
 - `GetUsersMinInfo`
 - `GetUserInfo`
-- `SetUserName`
+- `SetUserDisplayName`
 - `SetUserDescription`
 - `GenerateUserAvatarUploadLink`
 - `ConfirmUserAvatarUploading`
@@ -38,8 +38,7 @@ Owns:
 erDiagram
     USER_USERS {
         uuid user_id PK
-        varchar first_name
-        varchar last_name
+        varchar display_name
         varchar description
         uuid avatar_id
     }

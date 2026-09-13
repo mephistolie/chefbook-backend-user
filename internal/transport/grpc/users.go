@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	maxNameLength        = 64
+	maxNameLength        = 128
 	maxDescriptionLength = 150
 )
 
@@ -25,8 +25,8 @@ func (s *UserServer) GetUsersMinInfo(ctx context.Context, req *api.GetUsersMinIn
 	infos := make(map[string]*api.UserMinInfo)
 	for id, info := range response {
 		infos[id.String()] = &api.UserMinInfo{
-			FullName: info.FullName,
-			Avatar:   info.AvatarLink,
+			DisplayName: info.DisplayName,
+			Avatar:      info.AvatarLink,
 		}
 	}
 
@@ -46,33 +46,28 @@ func (s *UserServer) GetUserInfo(ctx context.Context, req *api.GetUserInfoReques
 
 	return &api.GetUserInfoResponse{
 		UserId:      info.UserId.String(),
-		FirstName:   info.FirstName,
-		LastName:    info.LastName,
+		DisplayName: info.DisplayName,
 		Description: info.Description,
 		Avatar:      info.AvatarLink,
 	}, nil
 }
 
-func (s *UserServer) SetUserName(ctx context.Context, req *api.SetUserNameRequest) (*api.SetUserNameResponse, error) {
+func (s *UserServer) SetUserDisplayName(ctx context.Context, req *api.SetUserDisplayNameRequest) (*api.SetUserDisplayNameResponse, error) {
 	userId, err := uuid.Parse(req.UserId)
 	if err != nil {
 		return nil, fail.GrpcInvalidBody
 	}
-	if req.FirstName != nil && len([]rune(*req.FirstName)) > maxNameLength {
-		firstName := string([]rune(*req.FirstName)[0:maxNameLength])
-		req.FirstName = &firstName
-	}
-	if req.LastName != nil && len([]rune(*req.LastName)) > maxNameLength {
-		lastName := string([]rune(*req.LastName)[0:maxNameLength])
-		req.LastName = &lastName
+	if req.DisplayName != nil && len([]rune(*req.DisplayName)) > maxNameLength {
+		displayName := string([]rune(*req.DisplayName)[0:maxNameLength])
+		req.DisplayName = &displayName
 	}
 
-	err = s.service.SetUserName(ctx, userId, req.FirstName, req.LastName)
+	err = s.service.SetUserDisplayName(ctx, userId, req.DisplayName)
 	if err != nil {
 		return nil, err
 	}
 
-	return &api.SetUserNameResponse{Message: "user name changed"}, nil
+	return &api.SetUserDisplayNameResponse{Message: "user name changed"}, nil
 }
 
 func (s *UserServer) SetUserDescription(ctx context.Context, req *api.SetUserDescriptionRequest) (*api.SetUserDescriptionResponse, error) {

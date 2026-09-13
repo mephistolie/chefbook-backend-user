@@ -5,12 +5,13 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
-	"github.com/mephistolie/chefbook-backend-common/log"
 	"github.com/mephistolie/chefbook-backend-common/responses/fail"
 	"github.com/mephistolie/chefbook-backend-user/internal/config"
+	"github.com/mephistolie/chefbook-backend-user/internal/logging"
 )
 
 const (
@@ -22,7 +23,8 @@ const (
 )
 
 type Repository struct {
-	db *sqlx.DB
+	db     *sqlx.DB
+	events logging.Events
 }
 
 func Connect(cfg config.Database) (*sqlx.DB, error) {
@@ -45,7 +47,7 @@ func NewRepository(db *sqlx.DB) *Repository {
 func (r *Repository) startTransaction(ctx context.Context) (*sql.Tx, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
-		log.AutoError("unable to begin transaction: ", err)
+		r.events.DatabaseTransactionFailed(ctx, "begin", err)
 		return nil, fail.GrpcUnknown
 	}
 	return tx, nil
@@ -56,9 +58,9 @@ func errorWithTransactionRollback(tx *sql.Tx, err error) error {
 	return err
 }
 
-func commitTransaction(tx *sql.Tx) error {
+func (r *Repository) commitTransaction(ctx context.Context, tx *sql.Tx) error {
 	if err := tx.Commit(); err != nil {
-		log.AutoError("unable to commit transaction: ", err)
+		r.events.DatabaseTransactionFailed(ctx, "commit", err)
 		_ = tx.Rollback()
 		return fail.GrpcUnknown
 	}

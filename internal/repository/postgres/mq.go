@@ -4,10 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+
 	"github.com/google/uuid"
-	"github.com/mephistolie/chefbook-backend-common/log"
 	"github.com/mephistolie/chefbook-backend-common/responses/fail"
-	"strings"
+	"github.com/mephistolie/chefbook-backend-user/internal/logging"
 )
 
 func (r *Repository) CreateUser(ctx context.Context, userId uuid.UUID, messageId uuid.UUID) error {
@@ -26,14 +26,17 @@ func (r *Repository) CreateUser(ctx context.Context, userId uuid.UUID, messageId
 	`, usersTable)
 
 	if _, err = tx.ExecContext(ctx, query, userId); err != nil {
-		log.AutoErrorf("unable to create user %s: %s", userId, err)
+		r.events.UserMutationFailed(ctx, logging.UserOperationData{
+			UserID:    userId.String(),
+			Operation: "create",
+		}, err)
 		return errorWithTransactionRollback(tx, fail.GrpcUnknown)
 	}
 
-	return commitTransaction(tx)
+	return r.commitTransaction(ctx, tx)
 }
 
-func (r *Repository) ImportFirebaseName(ctx context.Context, userId uuid.UUID, username *string, messageId uuid.UUID) error {
+func (r *Repository) ImportFirebaseName(ctx context.Context, userId uuid.UUID, displayName *string, messageId uuid.UUID) error {
 	tx, err := r.handleMessageIdempotently(ctx, messageId)
 	if err != nil {
 		if isUniqueViolationError(err) {
@@ -43,27 +46,21 @@ func (r *Repository) ImportFirebaseName(ctx context.Context, userId uuid.UUID, u
 		}
 	}
 
-	var firstName, secondName *string = nil, nil
-	if username != nil {
-		parts := strings.Split(*username, " ")
-		firstName = &parts[0]
-		if len(parts) > 1 {
-			secondName = &parts[1]
-		}
-	}
-
 	query := fmt.Sprintf(`
 		UPDATE %s
-		SET first_name=$1, last_name=$2
-		WHERE user_id=$3
+		SET display_name=$1
+		WHERE user_id=$2
 	`, usersTable)
 
-	if _, err = tx.ExecContext(ctx, query, firstName, secondName, userId); err != nil {
-		log.AutoErrorf("unable to create user %s: %s", userId, err)
+	if _, err = tx.ExecContext(ctx, query, displayName, userId); err != nil {
+		r.events.UserMutationFailed(ctx, logging.UserOperationData{
+			UserID:    userId.String(),
+			Operation: "import_firebase_name",
+		}, err)
 		return errorWithTransactionRollback(tx, fail.GrpcUnknown)
 	}
 
-	return commitTransaction(tx)
+	return r.commitTransaction(ctx, tx)
 }
 
 func (r *Repository) DeleteUser(ctx context.Context, userId uuid.UUID, messageId uuid.UUID) error {
@@ -82,11 +79,14 @@ func (r *Repository) DeleteUser(ctx context.Context, userId uuid.UUID, messageId
 	`, usersTable)
 
 	if _, err := tx.ExecContext(ctx, query, userId); err != nil {
-		log.AutoErrorf("unable to delete user %s: %s", userId, err)
+		r.events.UserMutationFailed(ctx, logging.UserOperationData{
+			UserID:    userId.String(),
+			Operation: "delete",
+		}, err)
 		return errorWithTransactionRollback(tx, fail.GrpcUnknown)
 	}
 
-	return commitTransaction(tx)
+	return r.commitTransaction(ctx, tx)
 }
 
 func (r *Repository) handleMessageIdempotently(ctx context.Context, messageId uuid.UUID) (*sql.Tx, error) {
@@ -102,7 +102,7 @@ func (r *Repository) handleMessageIdempotently(ctx context.Context, messageId uu
 
 	if _, err = tx.ExecContext(ctx, addMessageQuery, messageId); err != nil {
 		if !isUniqueViolationError(err) {
-			log.AutoError("unable to add message to inbox: ", err)
+			r.events.InboxOperationFailed(ctx, "insert", err)
 		}
 		return nil, errorWithTransactionRollback(tx, err)
 	}
@@ -119,6 +119,7 @@ func (r *Repository) handleMessageIdempotently(ctx context.Context, messageId uu
 	`, inboxTable)
 
 	if _, err = tx.ExecContext(ctx, deleteOutdatedMessagesQuery); err != nil {
+		r.events.InboxOperationFailed(ctx, "delete_outdated", err)
 		return nil, errorWithTransactionRollback(tx, err)
 	}
 

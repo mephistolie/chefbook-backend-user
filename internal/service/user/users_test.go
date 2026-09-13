@@ -16,12 +16,12 @@ func TestGetUserInfoAddsAvatarLink(t *testing.T) {
 	ctx := context.Background()
 	userId := uuid.New()
 	avatarId := uuid.New()
-	firstName := "Test"
+	displayName := "Test"
 	repo := &fakeUserRepo{
 		info: entity.UserInfo{
-			UserId:    userId,
-			FirstName: &firstName,
-			AvatarId:  &avatarId,
+			UserId:      userId,
+			DisplayName: &displayName,
+			AvatarId:    &avatarId,
 		},
 	}
 	s3 := &fakeS3Repo{avatarLinks: map[uuid.UUID]string{avatarId: "https://cdn/avatar.png"}}
@@ -166,7 +166,7 @@ func (r *fakeUserRepo) GetUserInfo(context.Context, uuid.UUID) (entity.UserInfo,
 	return r.info, nil
 }
 
-func (r *fakeUserRepo) SetUserName(context.Context, uuid.UUID, *string, *string) error {
+func (r *fakeUserRepo) SetUserDisplayName(context.Context, uuid.UUID, *string) error {
 	return errors.New("not implemented")
 }
 
@@ -214,7 +214,7 @@ func (r *fakeS3Repo) DeleteAvatar(_ context.Context, _ uuid.UUID, avatarId uuid.
 	return nil
 }
 
-func (r *fakeS3Repo) GetAvatarIdByLink(_ uuid.UUID, link string) *uuid.UUID {
+func (r *fakeS3Repo) GetAvatarIdByLink(_ context.Context, _ uuid.UUID, link string) *uuid.UUID {
 	if avatarId, ok := r.avatarIdsByLink[link]; ok {
 		return &avatarId
 	}

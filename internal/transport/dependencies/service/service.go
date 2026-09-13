@@ -5,9 +5,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mephistolie/chefbook-backend-common/firebase"
-	"github.com/mephistolie/chefbook-backend-common/log"
 	"github.com/mephistolie/chefbook-backend-user/internal/config"
 	"github.com/mephistolie/chefbook-backend-user/internal/entity"
+	"github.com/mephistolie/chefbook-backend-user/internal/logging"
 	s32 "github.com/mephistolie/chefbook-backend-user/internal/repository/s3"
 	"github.com/mephistolie/chefbook-backend-user/internal/service/dependencies/repository"
 	"github.com/mephistolie/chefbook-backend-user/internal/service/mq"
@@ -22,7 +22,7 @@ type Service struct {
 type User interface {
 	GetUsersMinimalInfos(ctx context.Context, userIds []uuid.UUID) map[uuid.UUID]entity.UserMinimalInfo
 	GetUserInfo(ctx context.Context, userId uuid.UUID) (entity.UserInfo, error)
-	SetUserName(ctx context.Context, userId uuid.UUID, firstName, lastName *string) error
+	SetUserDisplayName(ctx context.Context, userId uuid.UUID, displayName *string) error
 	SetUserDescription(ctx context.Context, userId uuid.UUID, description *string) error
 	GenerateUserAvatarUploadLink(ctx context.Context, userId uuid.UUID) (entity.PictureUpload, error)
 	ConfirmUserAvatarUploading(ctx context.Context, userId uuid.UUID, avatarLnk string) error
@@ -48,7 +48,7 @@ func New(
 		if err != nil {
 			return nil, err
 		}
-		log.AutoInfo("Firebase client initialized")
+		logging.Events{}.FirebaseClientInitialized(ctx)
 	}
 
 	s3, err := s32.NewRepository(cfg.S3)

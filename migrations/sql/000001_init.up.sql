@@ -1,8 +1,7 @@
 CREATE TABLE users
 (
     user_id     uuid PRIMARY KEY NOT NULL,
-    first_name  VARCHAR(64)  DEFAULT NULL,
-    last_name   VARCHAR(64)  DEFAULT NULL,
+    display_name VARCHAR(128) DEFAULT NULL,
     description VARCHAR(150) DEFAULT NULL,
     avatar_id   uuid         DEFAULT NULL
 );

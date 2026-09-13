@@ -2,96 +2,94 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
+
 	"github.com/google/uuid"
-	"github.com/mephistolie/chefbook-backend-common/log"
 	"github.com/mephistolie/chefbook-backend-common/responses/fail"
 	"github.com/mephistolie/chefbook-backend-user/internal/entity"
+	"github.com/mephistolie/chefbook-backend-user/internal/logging"
 )
 
 func (r *Repository) GetUsersMinimalInfos(ctx context.Context, userIds []uuid.UUID) map[uuid.UUID]entity.UserMinimalInfo {
 	infos := make(map[uuid.UUID]entity.UserMinimalInfo)
 
 	query := fmt.Sprintf(`
-		SELECT user_id, first_name, last_name, avatar_id
+		SELECT user_id, display_name, avatar_id
 		FROM %s
 		WHERE user_id=ANY($1)
 	`, usersTable)
 
 	rows, err := r.db.QueryContext(ctx, query, userIds)
 	if err != nil {
-		log.AutoError("unable to get minimal info for users: ", err)
+		r.events.MinimalInfoQueryFailed(ctx, logging.BatchOperationData{
+			Operation:      "query",
+			RequestedCount: len(userIds),
+		}, err)
 		return map[uuid.UUID]entity.UserMinimalInfo{}
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		var info entity.UserMinimalInfo
-		var firstName *string
-		var lastName *string
 
-		if err = rows.Scan(&info.UserId, &firstName, &lastName, &info.AvatarId); err != nil {
-			log.AutoError("unable to parse minimal info for user: ", err)
+		if err = rows.Scan(&info.UserId, &info.DisplayName, &info.AvatarId); err != nil {
+			r.events.MinimalInfoQueryDegraded(ctx, logging.BatchOperationData{
+				Operation:      "scan",
+				RequestedCount: len(userIds),
+			}, err)
 			continue
 		}
-
-		info.FullName = r.getFullName(firstName, lastName)
 
 		infos[info.UserId] = info
 	}
 	if err = rows.Err(); err != nil {
-		log.AutoError("unable to iterate minimal info for users: ", err)
+		r.events.MinimalInfoQueryFailed(ctx, logging.BatchOperationData{
+			Operation:      "iterate",
+			RequestedCount: len(userIds),
+		}, err)
 		return map[uuid.UUID]entity.UserMinimalInfo{}
 	}
 
 	return infos
 }
 
-func (r *Repository) getFullName(firstName, lastName *string) *string {
-	fullName := ""
-	if firstName != nil {
-		fullName += *firstName
-	}
-	if lastName != nil {
-		if firstName != nil {
-			fullName += " "
-		}
-		fullName += *lastName
-	}
-
-	if len(fullName) > 0 {
-		return &fullName
-	}
-	return nil
-}
-
 func (r *Repository) GetUserInfo(ctx context.Context, userId uuid.UUID) (entity.UserInfo, error) {
 	info := entity.UserInfo{}
 
 	query := fmt.Sprintf(`
-		SELECT user_id, first_name, last_name, description, avatar_id
+		SELECT user_id, display_name, description, avatar_id
 		FROM %s
 		WHERE user_id=$1
 	`, usersTable)
 
 	row := r.db.QueryRowContext(ctx, query, userId)
-	if err := row.Scan(&info.UserId, &info.FirstName, &info.LastName, &info.Description, &info.AvatarId); err != nil {
-		log.AutoWarnf("unable to get user %s info: %s", userId, err)
+	if err := row.Scan(&info.UserId, &info.DisplayName, &info.Description, &info.AvatarId); err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			r.events.UserReadFailed(ctx, logging.UserOperationData{
+				UserID:    userId.String(),
+				Operation: "get_info",
+			}, err)
+		}
 		return entity.UserInfo{}, fail.GrpcNotFound
 	}
 
 	return info, nil
 }
 
-func (r *Repository) SetUserName(ctx context.Context, userId uuid.UUID, firstName, lastName *string) error {
+func (r *Repository) SetUserDisplayName(ctx context.Context, userId uuid.UUID, displayName *string) error {
 	query := fmt.Sprintf(`
 		UPDATE %s
-		SET first_name=$1, last_name=$2
-		WHERE user_id=$3
+		SET display_name=$1
+		WHERE user_id=$2
 	`, usersTable)
 
-	if _, err := r.db.ExecContext(ctx, query, firstName, lastName, userId); err != nil {
-		log.AutoWarnf("unable to set user %s name: %s", userId, err)
+	if _, err := r.db.ExecContext(ctx, query, displayName, userId); err != nil {
+		r.events.UserMutationFailed(ctx, logging.UserOperationData{
+			UserID:    userId.String(),
+			Operation: "set_name",
+		}, err)
 		return fail.GrpcUnknown
 	}
 
@@ -106,7 +104,10 @@ func (r *Repository) SetUserDescription(ctx context.Context, userId uuid.UUID, d
 	`, usersTable)
 
 	if _, err := r.db.ExecContext(ctx, query, description, userId); err != nil {
-		log.AutoWarnf("unable to set user %s description: %s", userId, err)
+		r.events.UserMutationFailed(ctx, logging.UserOperationData{
+			UserID:    userId.String(),
+			Operation: "set_description",
+		}, err)
 		return fail.GrpcUnknown
 	}
 
@@ -135,7 +136,10 @@ func (r *Repository) RegisterAvatarUploading(ctx context.Context, userId uuid.UU
 	`, avatarUploadsTable)
 
 	if err := r.db.GetContext(ctx, &avatarId, query, userId); err != nil {
-		log.AutoErrorf("unable to register avatar uploading for user %s: %s", userId, err)
+		r.events.UserMutationFailed(ctx, logging.UserOperationData{
+			UserID:    userId.String(),
+			Operation: "register_avatar_upload",
+		}, err)
 		return uuid.UUID{}, fail.GrpcUnknown
 	}
 
@@ -152,7 +156,10 @@ func (r *Repository) SetUserAvatar(ctx context.Context, userId uuid.UUID, avatar
 	`, usersTable)
 
 	if err := r.db.QueryRowContext(ctx, getPreviousAvatarIdQuery, userId).Scan(&previousAvatarId); err != nil {
-		log.AutoWarnf("unable to get user %s avatar id: %s", userId, err)
+		r.events.UserReadFailed(ctx, logging.UserOperationData{
+			UserID:    userId.String(),
+			Operation: "read_avatar",
+		}, err)
 		return nil, fail.GrpcUnknown
 	}
 
@@ -172,7 +179,10 @@ func (r *Repository) SetUserAvatar(ctx context.Context, userId uuid.UUID, avatar
 	`, usersTable)
 
 	if _, err := tx.ExecContext(ctx, setAvatarQuery, avatarId, userId); err != nil {
-		log.AutoWarnf("unable to set user %s avatar id: %s", userId, err)
+		r.events.UserMutationFailed(ctx, logging.UserOperationData{
+			UserID:    userId.String(),
+			Operation: "set_avatar",
+		}, err)
 		return nil, fail.GrpcUnknown
 	}
 
@@ -183,10 +193,13 @@ func (r *Repository) SetUserAvatar(ctx context.Context, userId uuid.UUID, avatar
 	`, avatarUploadsTable)
 
 		if _, err := tx.ExecContext(ctx, deleteUploadingQuery, *avatarId, userId); err != nil {
-			log.AutoWarnf("unable to delete avatar uploading record for user %s: %s", userId, err)
+			r.events.UserMutationFailed(ctx, logging.UserOperationData{
+				UserID:    userId.String(),
+				Operation: "delete_avatar_upload",
+			}, err)
 			return nil, fail.GrpcUnknown
 		}
 	}
 
-	return previousAvatarId, commitTransaction(tx)
+	return previousAvatarId, r.commitTransaction(ctx, tx)
 }
